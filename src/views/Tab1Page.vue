@@ -74,7 +74,7 @@
               </div>
 
               <!-- Action Buttons for articles WITHOUT images -->
-              <div class="article-actions no-image-actions" v-if="!item.image" @click.stop>
+              <div class="article-actions no-image-actions" v-if="!item.media || item.media.length === 0" @click.stop>
                 <ion-button 
                   fill="clear" 
                   size="small"
@@ -101,16 +101,41 @@
               </div>
 
               <!-- Image inside sticky header as requested -->
-              <div class="article-image-container" v-if="item.image">
-                <img 
-                  :src="item.image" 
-                  :alt="item.title" 
-                  class="vintage-image" 
-                  @click.stop="openImageFullscreen(item.image)"
-                />
+              <!-- Multimedia Album (Images & Videos) -->
+              <div class="article-album-container" v-if="item.media && item.media.length > 0">
+                <div class="album-scroller" :class="{ 'single-item': item.media.length === 1 }">
+                  <div 
+                    v-for="(media, mIdx) in item.media" 
+                    :key="mIdx" 
+                    class="album-item"
+                  >
+                    <!-- Video Player -->
+                    <video 
+                      v-if="media.type === 'video'"
+                      class="vintage-video"
+                      controls
+                      playsinline
+                      preload="metadata"
+                      @click.stop
+                    >
+                      <source :src="media.url" />
+                      Your browser does not support the video tag.
+                    </video>
+
+                    <!-- Image with Fullscreen -->
+                    <img 
+                      v-else
+                      :src="media.url" 
+                      :alt="item.title" 
+                      class="vintage-image" 
+                      @click.stop="openImageFullscreen(media.url)"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
                 
                 <!-- Action Buttons -->
-                <div class="article-actions" @click.stop>
+                <div class="article-actions" @click.stop v-if="item.media && item.media.length > 0">
                   <ion-button 
                     fill="clear" 
                     size="small"
@@ -134,6 +159,11 @@
                   >
                     <ion-icon slot="icon-only" :icon="shareSocialOutline"></ion-icon>
                   </ion-button>
+                </div>
+
+                <!-- Album Indicator -->
+                <div class="album-indicator" v-if="item.media.length > 1">
+                  ARCHIVE: {{ item.media.length }} DISPATCHES
                 </div>
               </div>
 
@@ -205,12 +235,17 @@ import {
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+interface NewsMedia {
+  type: 'image' | 'video';
+  url: string;
+}
+
 interface NewsItem {
   title: string;
   link: string;
   description: string;
   pubDate: string;
-  image: string;
+  media: NewsMedia[];
   creator: string;
   category: string;
   source: string;
@@ -270,27 +305,52 @@ function romanize(num: number) {
 
 const updateWeatherAndLocation = async () => {
   try {
-    // 1. Get Location & Coordinates
-    const locResponse = await fetch('https://ipapi.co/json/');
-    if (!locResponse.ok) throw new Error('LOCATION SIGNAL LOST');
-    const locData = await locResponse.json();
+    let lat, lon;
     
-    if (locData.city && locData.country_name) {
-      currentLocation.value = `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
+    // 1. Try Precise Geolocation First
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      lat = position.coords.latitude;
+      lon = position.coords.longitude;
+      
+      // Reverse Geocoding for accurate city name
+      const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const geoData = await geoResp.json();
+      const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.suburb;
+      const country = geoData.address.country;
+      
+      if (city && country) {
+        currentLocation.value = `${city.toUpperCase()}, ${country.toUpperCase()}`;
+      }
+    } catch (geoErr) {
+      console.warn('GPS Signal unavailable, falling back to IP based detection.');
+      // 2. Fallback: IP-based location
+      const locResponse = await fetch('https://ipapi.co/json/');
+      if (locResponse.ok) {
+        const locData = await locResponse.json();
+        lat = locData.latitude;
+        lon = locData.longitude;
+        if (locData.city && locData.country_name) {
+          currentLocation.value = `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
+        }
+      }
     }
 
-    // 2. Get Real Weather using coordinates
-    if (locData.latitude && locData.longitude) {
-      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${locData.latitude}&longitude=${locData.longitude}&current=weather_code`);
+    // 3. Get Real Weather using final coordinates
+    if (lat && lon) {
+      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`);
       const weatherData = await weatherResponse.json();
       const code = weatherData.current.weather_code;
 
-      // 3. Map to Vintage Newspaper Terms
       const weatherMap: Record<number, string> = {
         0: 'FAIR & CLOUDLESS',
         1: 'FAIR & SUNNY',
         2: 'PARTLY CLOUDY',
-        3: 'OVERCAST SKIES',
+        3: 'OVERCAST',
         45: 'MISTY MORNING',
         48: 'FOGGY CONDITIONS',
         51: 'LIGHT DRIZZLE',
@@ -299,12 +359,10 @@ const updateWeatherAndLocation = async () => {
         95: 'STORMY WINDS'
       };
 
-      // Find best match or default
       currentWeather.value = weatherMap[code] || (code > 60 ? 'RAINING HEAVILY' : 'FAIR & SUNNY');
     }
   } catch (e) {
     console.error('Weather/Location wire failure. Defaulting to heritage data.');
-    // Keep internal fallbacks if API fails
   }
 };
 
@@ -382,16 +440,24 @@ const getSourceName = (url: string): string => {
     'inquirer.net': 'Inquirer',
     'mb.com.ph': 'Manila Bulletin',
     'bbci.co.uk': 'BBC News',
+    'bbc.com': 'BBC News',
     'reuters': 'Reuters',
     'aljazeera.com': 'Al Jazeera',
     'theguardian.com': 'The Guardian',
+    'cnn.com': 'CNN',
+    'nytimes.com': 'New York Times',
     'techcrunch.com': 'TechCrunch',
     'theverge.com': 'The Verge',
     'arstechnica.com': 'Ars Technica',
     'wired.com': 'Wired',
+    'engadget.com': 'Engadget',
+    'mashable.com': 'Mashable',
     'ft.com': 'Financial Times',
     'bloomberg.com': 'Bloomberg',
     'forbes.com': 'Forbes',
+    'wsj.com': 'Wall Street Journal',
+    'dj.com': 'Wall Street Journal',
+    'espn.com': 'ESPN',
     'scientificamerican.com': 'Scientific American',
     'nature.com': 'Nature',
     'who.int': 'WHO',
@@ -401,11 +467,24 @@ const getSourceName = (url: string): string => {
   };
   
   for (const [key, value] of Object.entries(sourceMap)) {
-    if (url.includes(key)) {
+    if (url.toLowerCase().includes(key)) {
       return value;
     }
   }
-  return 'News Feed';
+  
+  // Dynamic fallback: extract the domain name
+  try {
+    const hostname = new URL(url).hostname;
+    const parts = hostname.replace('www.', '').split('.');
+    if (parts.length > 0) {
+      const name = parts[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+  } catch (e) {
+    // If URL parsing fails, just return generic
+  }
+  
+  return 'News Wire';
 };
 
 // Professional Caching System
@@ -563,7 +642,7 @@ const fetchNews = async () => {
             pubDate: item.querySelector('pubDate')?.textContent || '',
             creator: item.getElementsByTagName('dc:creator')[0]?.textContent || item.querySelector('author')?.textContent || '',
             category: item.querySelector('category')?.textContent || '',
-            image: extractImage(item),
+            media: extractMedia(item),
             source: sourceName
           };
         });
@@ -628,7 +707,7 @@ const fetchFreshNews = async (feedUrls: string[]) => {
             pubDate: item.querySelector('pubDate')?.textContent || '',
             creator: item.getElementsByTagName('dc:creator')[0]?.textContent || item.querySelector('author')?.textContent || '',
             category: item.querySelector('category')?.textContent || '',
-            image: extractImage(item),
+            media: extractMedia(item),
             source: sourceName
           };
         });
@@ -680,45 +759,74 @@ const cleanDescription = (desc: string) => {
   return cleaned;
 };
 
-const extractImage = (item: Element): string => {
-  // 1. Check known media tags
-  const mediaContent = item.getElementsByTagName('media:content')[0];
-  const mediaThumbnail = item.getElementsByTagName('media:thumbnail')[0];
-  const enclosure = item.querySelector('enclosure');
-  const thumbImage = item.getElementsByTagName('thumbimage')[0];
-
-  // Try attributes first
-  let url = mediaContent?.getAttribute('url') || 
-            mediaThumbnail?.getAttribute('url') || 
-            enclosure?.getAttribute('url');
-
-  // 2. Try text content if attributes fail (common for ABS-CBN and others)
-  if (!url) {
-    url = mediaContent?.textContent || 
-          mediaThumbnail?.textContent || 
-          thumbImage?.textContent;
-  }
-
-  // 3. Fallback: Search all tags for something that looks like an image URL
-  if (!url || !url.trim()) {
-    const allTags = item.querySelectorAll('*');
-    for (const tag of Array.from(allTags)) {
-      const content = tag.textContent?.trim();
-      if (content && (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.includes('.jpg?') || content.includes('.jpeg?'))) {
-        url = content;
-        break;
+const extractMedia = (item: Element): NewsMedia[] => {
+  const mediaItems: NewsMedia[] = [];
+  
+  // 1. Check media:content
+  const mediaContents = item.getElementsByTagName('media:content');
+  for (let i = 0; i < mediaContents.length; i++) {
+    const url = mediaContents[i].getAttribute('url');
+    const type = mediaContents[i].getAttribute('type');
+    const medium = mediaContents[i].getAttribute('medium');
+    
+    if (url) {
+      if (medium === 'video' || (type && type.startsWith('video')) || url.match(/\.(mp4|m3u8|webm|ogg)(\?.*)?$/i)) {
+        mediaItems.push({ type: 'video', url });
+      } else {
+        mediaItems.push({ type: 'image', url });
       }
     }
   }
-
-  // 4. Final Fallback: Check description for <img> tag
-  if (!url || !url.trim()) {
-    const description = item.querySelector('description')?.textContent || '';
-    const imgMatch = description.match(/<img[^>]+src="([^">]+)"/i);
-    if (imgMatch) url = imgMatch[1];
+  
+  // 2. Check media:thumbnail (always images)
+  const mediaThumbnails = item.getElementsByTagName('media:thumbnail');
+  for (let i = 0; i < mediaThumbnails.length; i++) {
+    const url = mediaThumbnails[i].getAttribute('url');
+    if (url) mediaItems.push({ type: 'image', url });
   }
 
-  return url?.trim() || '';
+  // 3. Check enclosures
+  const enclosures = item.querySelectorAll('enclosure');
+  enclosures.forEach(enc => {
+    const url = enc.getAttribute('url');
+    const type = enc.getAttribute('type');
+    if (url) {
+      if ((type && type.startsWith('video')) || url.match(/\.(mp4|m3u8|webm|ogg)(\?.*)?$/i)) {
+        mediaItems.push({ type: 'video', url });
+      } else if (!type || type.startsWith('image/')) {
+        mediaItems.push({ type: 'image', url });
+      }
+    }
+  });
+
+  // 4. Regex fallback for description and content:encoded
+  const description = item.querySelector('description')?.textContent || '';
+  const contentEncoded = item.getElementsByTagName('content:encoded')[0]?.textContent || '';
+  const combinedHtml = description + contentEncoded;
+  
+  // Images
+  const imgRegex = /<img[^>]+src="([^">]+)"/gi;
+  let match;
+  while ((match = imgRegex.exec(combinedHtml)) !== null) {
+    if (match[1]) mediaItems.push({ type: 'image', url: match[1] });
+  }
+
+  // Videos
+  const videoRegex = /<video[^>]+src="([^">]+)"/gi;
+  while ((match = videoRegex.exec(combinedHtml)) !== null) {
+    if (match[1]) mediaItems.push({ type: 'video', url: match[1] });
+  }
+  
+  // 5. Deduplicate and filter noise
+  const seenUrls = new Set<string>();
+  const filtered = mediaItems.filter(m => {
+    if (seenUrls.has(m.url)) return false;
+    seenUrls.add(m.url);
+    const low = m.url.toLowerCase();
+    return !low.includes('pixel') && !low.includes('tracker') && !low.includes('1x1');
+  });
+
+  return filtered;
 };
 
 const formatDate = (dateStr: string) => {
@@ -1053,14 +1161,67 @@ onMounted(() => {
   color: #444;
 }
 
-.article-image-container {
+.article-album-container {
   margin-bottom: calc(15px - (10px * var(--shrink-ratio)));
   border: 1px solid #222;
   padding: 2px;
-  background: white;
-  /* Reduced shrinking effect on width */
-  max-width: calc(100% - (var(--shrink-ratio) * 30%));
+  background: var(--parchment-white);
   align-self: center;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.album-scroller {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.album-scroller::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.album-item {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.album-scroller.single-item .album-item {
+  background: transparent;
+}
+
+.vintage-video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  max-height: 400px;
+  background: #000;
+  border: 1px solid #222;
+  filter: sepia(0.25) contrast(1.1);
+  display: block;
+}
+
+.album-indicator {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(26, 26, 26, 0.8);
+  color: #f4ecd8;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border: 1px solid #f4ecd8;
+  letter-spacing: 1px;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .vintage-image {
@@ -1309,7 +1470,7 @@ ion-refresher {
 }
 
 .vintage-close-btn {
-  background: #fdfbf3; /* Parchment Theme */
+  background: var(--parchment-white); /* Parchment Theme */
   border: 3px solid #1a1a1a; /* Ink Theme */
   width: 54px;
   height: 54px;

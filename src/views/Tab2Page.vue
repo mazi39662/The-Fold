@@ -1,8 +1,8 @@
 <template>
   <ion-page class="newspaper-page">
-    <ion-header :translucent="true">
-      <ion-toolbar class="vintage-toolbar">
-        <ion-title class="vintage-title">MY COLLECTION</ion-title>
+    <ion-header :translucent="true" class="header-fade" :class="{ 'header-visible': showHeaderTitle }">
+      <ion-toolbar class="sticky-toolbar">
+        <ion-title class="mini-title">Collection</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -17,6 +17,20 @@
       </ion-refresher>
 
       <div class="paper-overlay"></div>
+ 
+      <!-- Collection Masthead -->
+      <div class="masthead">
+        <div class="masthead-top">
+          <span class="masthead-date">{{ currentFormattedDate }}</span>
+          <span class="masthead-edition">PERSONAL ARCHIVES</span>
+          <span class="masthead-price">VOL. I</span>
+        </div>
+        <h1 class="collection-title">My Collection</h1>
+        <div class="masthead-bottom">
+          <div class="motto">"Preserving the dispatches of the day"</div>
+          <div class="article-count">{{ savedArticles.length + likedArticles.length }} ITEMS CATALOGED</div>
+        </div>
+      </div>
 
       <div class="collection-container">
         <!-- Segment to switch between Saved and Liked -->
@@ -50,8 +64,28 @@
                   <span class="dateline">{{ formatDate(item.pubDate) }}</span>
                 </div>
 
-                <div class="article-image-container" v-if="item.image">
-                  <img :src="item.image" :alt="item.title" class="vintage-image" loading="lazy" />
+                <div class="article-album-container" v-if="item.media && item.media.length > 0">
+                  <div class="album-scroller" :class="{ 'single-item': item.media.length === 1 }">
+                    <div 
+                      v-for="(media, mIdx) in item.media" 
+                      :key="mIdx" 
+                      class="album-item"
+                    >
+                      <video 
+                        v-if="media.type === 'video'"
+                        class="vintage-video"
+                        controls
+                        playsinline
+                        @click.stop
+                      >
+                        <source :src="media.url" />
+                      </video>
+                      <img v-else :src="media.url" :alt="item.title" class="vintage-image" loading="lazy" />
+                    </div>
+                  </div>
+                  <div class="album-indicator" v-if="item.media.length > 1">
+                    ARCHIVE: {{ item.media.length }}
+                  </div>
                 </div>
 
                 <div class="article-body">
@@ -92,8 +126,28 @@
                   <span class="dateline">{{ formatDate(item.pubDate) }}</span>
                 </div>
 
-                <div class="article-image-container" v-if="item.image">
-                  <img :src="item.image" :alt="item.title" class="vintage-image" loading="lazy" />
+                <div class="article-album-container" v-if="item.media && item.media.length > 0">
+                  <div class="album-scroller" :class="{ 'single-item': item.media.length === 1 }">
+                    <div 
+                      v-for="(media, mIdx) in item.media" 
+                      :key="mIdx" 
+                      class="album-item"
+                    >
+                      <video 
+                        v-if="media.type === 'video'"
+                        class="vintage-video"
+                        controls
+                        playsinline
+                        @click.stop
+                      >
+                        <source :src="media.url" />
+                      </video>
+                      <img v-else :src="media.url" :alt="item.title" class="vintage-image" loading="lazy" />
+                    </div>
+                  </div>
+                  <div class="album-indicator" v-if="item.media.length > 1">
+                    ARCHIVE: {{ item.media.length }}
+                  </div>
                 </div>
 
                 <div class="article-body">
@@ -135,12 +189,17 @@ import {
 import { chevronDownCircleOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 
+interface NewsMedia {
+  type: 'image' | 'video';
+  url: string;
+}
+
 interface NewsItem {
   title: string;
   link: string;
   description: string;
   pubDate: string;
-  image: string;
+  media: NewsMedia[];
   creator: string;
   category: string;
   source: string;
@@ -154,6 +213,17 @@ const likedPage = ref(1);
 const itemsPerPage = 10;
 const loadingSaved = ref(false);
 const loadingLiked = ref(false);
+const showHeaderTitle = ref(false);
+
+// Computed data for masthead
+const currentFormattedDate = computed(() => {
+  return new Intl.DateTimeFormat('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  }).format(new Date()).toUpperCase();
+});
 
 // Computed properties for lazy loading
 const displayedSaved = computed(() => {
@@ -199,17 +269,11 @@ const removeArticle = (link: string, type: 'saved' | 'liked') => {
   if (type === 'saved') {
     savedArticles.value = savedArticles.value.filter(a => a.link !== link);
     localStorage.setItem('saved_articles_data', JSON.stringify(savedArticles.value));
-    
-    const savedLinks = JSON.parse(localStorage.getItem('saved_articles') || '[]');
-    const updatedLinks = savedLinks.filter((l: string) => l !== link);
-    localStorage.setItem('saved_articles', JSON.stringify(updatedLinks));
+    localStorage.setItem('saved_articles', JSON.stringify(savedArticles.value.map(a => a.link)));
   } else {
     likedArticles.value = likedArticles.value.filter(a => a.link !== link);
     localStorage.setItem('liked_articles_data', JSON.stringify(likedArticles.value));
-    
-    const likedLinks = JSON.parse(localStorage.getItem('liked_articles') || '[]');
-    const updatedLinks = likedLinks.filter((l: string) => l !== link);
-    localStorage.setItem('liked_articles', JSON.stringify(updatedLinks));
+    localStorage.setItem('liked_articles', JSON.stringify(likedArticles.value.map(a => a.link)));
   }
 };
 
@@ -218,27 +282,23 @@ const segmentChanged = (event: any) => {
 };
 
 const handleRefresh = (event: any) => {
-  // Reload both lists
   loadSavedArticles();
   loadLikedArticles();
-  
-  // Reset pagination
   savedPage.value = 1;
   likedPage.value = 1;
-
-  // Small delay for visual feedback
   setTimeout(() => {
     event.target.complete();
   }, 1000);
 };
 
 const handleScroll = (event: any) => {
+  showHeaderTitle.value = event.detail.scrollTop > 150;
+  
   const scrollElement = event.target;
   const scrollTop = scrollElement.scrollTop;
   const scrollHeight = scrollElement.scrollHeight;
   const clientHeight = scrollElement.clientHeight;
   
-  // Load more when near bottom (80% scrolled)
   if (scrollTop + clientHeight >= scrollHeight * 0.8) {
     if (activeSegment.value === 'saved' && !loadingSaved.value) {
       if (displayedSaved.value.length < savedArticles.value.length) {
@@ -264,7 +324,6 @@ onMounted(() => {
   loadSavedArticles();
   loadLikedArticles();
   
-  // Listen for updates from Tab1
   window.addEventListener('storage', () => {
     loadSavedArticles();
     loadLikedArticles();
@@ -273,14 +332,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.newspaper-page {
-  --background: #f4ecd8;
-}
-
 .newspaper-content {
-  --background: transparent;
-  background-color: #f4ecd8;
-  position: relative;
+  background-color: transparent !important;
 }
 
 .paper-overlay {
@@ -293,26 +346,82 @@ onMounted(() => {
   background-repeat: repeat;
   opacity: 0.15;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
-.vintage-toolbar {
-  --background: #f4ecda;
-  --border-bottom: 2px solid #222;
-  --color: #000;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.sticky-toolbar {
+  --background: var(--ion-toolbar-background);
+  --color: var(--ion-toolbar-color);
+  --border-bottom: 2px solid var(--ion-text-color);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.vintage-title {
+.mini-title {
   font-family: 'Old Standard TT', serif;
   font-weight: 900;
   font-size: 1rem;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.header-fade {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.header-visible {
+  opacity: 1;
+}
+
+.masthead {
+  padding: 20px 20px 10px;
+  border-bottom: 5px double var(--ion-text-color);
+  margin-bottom: 25px;
   text-align: center;
 }
 
+.masthead-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--ion-text-color);
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+  color: var(--ion-text-color);
+  text-transform: uppercase;
+}
+
+.collection-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  font-weight: 900;
+  margin: 10px 0;
+  text-transform: uppercase;
+  color: var(--ion-text-color);
+  line-height: 1;
+}
+
+.masthead-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-top: 1px solid var(--ion-text-color);
+  padding-top: 5px;
+  margin-top: 5px;
+  color: var(--ion-text-color);
+}
+
+.motto {
+  font-style: italic;
+}
+
 .collection-container {
-  padding: 15px;
+  padding: 0 15px 120px;
   max-width: 900px;
   margin: 0 auto;
   position: relative;
@@ -321,20 +430,25 @@ onMounted(() => {
 
 ion-segment {
   margin-bottom: 20px;
-  --background: #f4ecda;
-  border: 2px solid #222;
+  --background: var(--ion-toolbar-background);
+  border: 2px solid var(--ion-text-color);
   border-radius: 4px;
 }
 
 ion-segment-button {
-  --color: #444;
-  --color-checked: #1a1a1a;
-  --indicator-color: #1a1a1a;
+  --color: var(--ion-text-color) !important;
+  --color-checked: var(--ion-background-color) !important;
+  --indicator-color: var(--ion-text-color) !important;
+  --background-checked: var(--ion-text-color) !important;
   font-family: 'Old Standard TT', serif;
-  font-weight: 700;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   font-size: 0.85rem;
+}
+
+ion-segment-button.segment-button-checked ion-label {
+  color: var(--ion-background-color) !important;
 }
 
 .empty-state {
@@ -346,14 +460,15 @@ ion-segment-button {
   font-family: 'Playfair Display', serif;
   font-weight: 900;
   font-size: 1.8rem;
-  color: #1a1a1a;
+  color: var(--ion-text-color);
   margin: 0 0 15px 0;
 }
 
 .empty-text {
   font-family: 'EB Garamond', serif;
   font-size: 1rem;
-  color: #444;
+  color: var(--ion-text-color);
+  opacity: 0.8;
   line-height: 1.6;
 }
 
@@ -365,22 +480,21 @@ ion-segment-button {
 
 .news-article {
   cursor: pointer;
-  border-bottom: 2px solid #222;
+  border-bottom: 2px solid var(--ion-text-color);
   padding-bottom: 15px;
 }
 
 .article-inner {
-  background: #fff;
-  padding: 15px;
-  border: 2px solid #222;
-  box-shadow: 2px 2px 0 #222;
+  background: transparent;
+  padding: 0;
+  border: none;
 }
 
 .article-title {
   font-family: 'Playfair Display', serif;
   font-weight: 900;
   font-size: 1.3rem;
-  color: #1a1a1a;
+  color: var(--ion-text-color);
   margin: 0 0 8px 0;
   line-height: 1.1;
   text-transform: uppercase;
@@ -389,8 +503,8 @@ ion-segment-button {
 .article-meta {
   font-family: 'Old Standard TT', serif;
   font-size: 0.75rem;
-  border-top: 2px solid #222;
-  border-bottom: 2px solid #222;
+  border-top: 2px solid var(--ion-text-color);
+  border-bottom: 2px solid var(--ion-text-color);
   padding: 5px 0;
   margin-bottom: 10px;
   display: flex;
@@ -401,19 +515,70 @@ ion-segment-button {
 
 .byline {
   font-weight: 900;
-  color: #000;
+  color: var(--ion-text-color);
 }
 
 .dateline {
   font-weight: 700;
-  color: #444;
+  color: var(--ion-text-color);
+  opacity: 0.7;
 }
 
-.article-image-container {
+.article-album-container {
   margin-bottom: 10px;
-  border: 1px solid #222;
+  border: 1px solid var(--ion-text-color);
   padding: 2px;
-  background: white;
+  background: var(--parchment-white);
+  position: relative;
+  overflow: hidden;
+}
+
+.album-scroller {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.album-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.album-item {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.album-scroller.single-item .album-item {
+  background: transparent;
+}
+
+.vintage-video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  border: 1px solid var(--ion-text-color);
+  filter: sepia(0.2) contrast(1.1);
+  display: block;
+}
+
+.album-indicator {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .vintage-image {
@@ -428,20 +593,16 @@ ion-segment-button {
   font-family: 'EB Garamond', serif;
   font-size: 1rem;
   line-height: 1.4;
-  color: #222;
+  color: var(--ion-text-color);
   text-align: justify;
-}
-
-.article-lead {
-  margin: 0;
 }
 
 .remove-btn {
   margin-top: 15px;
   padding: 10px 20px;
-  background: #1a1a1a;
-  color: #f4ecd8;
-  border: 2px solid #222;
+  background: var(--ion-text-color);
+  color: var(--ion-background-color);
+  border: 2px solid var(--ion-text-color);
   font-family: 'Old Standard TT', serif;
   font-weight: 900;
   font-size: 0.8rem;
@@ -449,19 +610,18 @@ ion-segment-button {
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 2px 2px 0 #222;
+  box-shadow: 2px 2px 0 var(--ion-text-color);
   width: 100%;
 }
 
 .remove-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 3px 3px 0 #222;
-  background: #000;
+  box-shadow: 3px 3px 0 var(--ion-text-color);
 }
 
 .remove-btn:active {
   transform: translateY(0);
-  box-shadow: 1px 1px 0 #222;
+  box-shadow: 1px 1px 0 var(--ion-text-color);
 }
 
 .loading-more {

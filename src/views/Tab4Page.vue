@@ -401,7 +401,7 @@ onMounted(() => {
 }
 
 .quick-btn {
-  background: #fff;
+  background: var(--parchment-white);
   border: 2px solid #222;
   padding: 10px 20px;
   font-family: 'Old Standard TT', serif;
@@ -427,7 +427,7 @@ onMounted(() => {
 }
 
 .vintage-searchbar {
-  --background: #fff;
+  --background: var(--parchment-white);
   --color: #1a1a1a;
   --placeholder-color: #666;
   --icon-color: #1a1a1a;
@@ -440,7 +440,7 @@ onMounted(() => {
 }
 
 .vintage-searchbar :deep(.searchbar-input-container) {
-  background: #fff !important;
+  background: var(--parchment-white) !important;
 }
 
 .vintage-searchbar :deep(.searchbar-input) {
@@ -454,7 +454,7 @@ onMounted(() => {
 .no-results {
   text-align: center;
   padding: 40px 20px;
-  background: #fff;
+  background: var(--parchment-white);
   border: 2px dashed #222;
   margin-bottom: 20px;
 }
@@ -475,7 +475,7 @@ onMounted(() => {
 }
 
 .category-block {
-  background: #fff;
+  background: var(--parchment-white);
   border: 2px solid #222;
   box-shadow: 3px 3px 0 #222;
 }
@@ -487,7 +487,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f9f9f9;
+  background: var(--ion-background-color);
   transition: background 0.2s;
 }
 
@@ -521,7 +521,7 @@ onMounted(() => {
   font-size: 0.9rem;
   font-weight: 700;
   color: #1a1a1a;
-  background: #eee;
+  background: var(--parchment-white);
   padding: 2px 8px;
   border: 1px solid #222;
 }
@@ -544,13 +544,13 @@ onMounted(() => {
 .feed-item {
   padding: 10px;
   border: 1px solid transparent;
-  background: #fff;
+  background: var(--parchment-white);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .feed-item:hover {
-  background: #f9f9f9;
+  background: var(--ion-toolbar-background);
 }
 
 .feed-item.selected {
@@ -576,7 +576,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--parchment-white);
   transition: background 0.2s;
 }
 

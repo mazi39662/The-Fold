@@ -323,7 +323,7 @@ onMounted(() => {
 }
 
 .onboarding-card {
-  background: #fdfbf3;
+  background: var(--parchment-white);
   border: 3px solid #222;
   box-shadow: 8px 8px 0 #222;
   padding: 10px;
@@ -386,7 +386,7 @@ onMounted(() => {
 }
 
 .secondary-btn {
-  background: #fdfbf3;
+  background: var(--parchment-white);
   color: #1a1a1a;
   box-shadow: 6px 6px 0 #1a1a1a;
 }
@@ -418,7 +418,7 @@ onMounted(() => {
   max-width: 600px;
   display: flex;
   flex-direction: column;
-  background: #fdfbf3;
+  background: var(--parchment-white);
   border: 4px solid #222;
   box-shadow: 12px 12px 0 #222;
   padding: 20px 16px;
@@ -432,7 +432,7 @@ onMounted(() => {
 }
 
 .small-vintage-btn {
-  background: #fdfbf3;
+  background: var(--parchment-white);
   border: 2px solid #222;
   padding: 8px 12px;
   font-family: 'Old Standard TT', serif;
@@ -459,7 +459,7 @@ onMounted(() => {
 }
 
 .category-block {
-  background: #fdfbf3;
+  background: var(--parchment-white);
   border: 2px solid #222;
   margin-bottom: 15px;
   box-shadow: 3px 3px 0 #222;
@@ -484,7 +484,7 @@ onMounted(() => {
   font-family: 'EB Garamond', serif;
   font-size: 0.85rem;
   font-weight: 700;
-  background: #fdfbf3;
+  background: var(--parchment-white);
   padding: 2px 6px;
   border: 1px solid #222;
   color: #1a1a1a;
@@ -541,7 +541,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fdfbf3;
+  background: var(--parchment-white);
   margin-top: 2px;
 }
 
@@ -571,7 +571,7 @@ onMounted(() => {
 }
 
 .vintage-searchbar {
-  --background: #fdfbf3;
+  --background: var(--parchment-white);
   --color: #1a1a1a !important;
   --placeholder-color: #666;
   --icon-color: #1a1a1a !important;

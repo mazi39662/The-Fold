@@ -8,6 +8,11 @@
           <ion-label>News Feed</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="tab3" href="/tabs/tab3">
+          <ion-icon aria-hidden="true" :icon="cloudyOutline" />
+          <ion-label>Weather</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="tab2" href="/tabs/tab2">
           <ion-icon aria-hidden="true" :icon="bookmarkOutline" />
           <ion-label>Collection</ion-label>
@@ -17,6 +22,11 @@
           <ion-icon aria-hidden="true" :icon="libraryOutline" />
           <ion-label>Sources</ion-label>
         </ion-tab-button>
+
+        <ion-tab-button tab="tab5" href="/tabs/tab5">
+          <ion-icon aria-hidden="true" :icon="settingsOutline" />
+          <ion-label>Settings</ion-label>
+        </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
   </ion-page>
@@ -24,33 +34,86 @@
 
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { newspaperOutline, bookmarkOutline, libraryOutline } from 'ionicons/icons';
+import { newspaperOutline, bookmarkOutline, libraryOutline, cloudyOutline, settingsOutline } from 'ionicons/icons';
 </script>
 
 <style scoped>
 .vintage-tab-bar {
   --background: #f4ecd8;
   --border-top: 2px solid #222;
-  height: 65px;
+  height: 75px; 
   background-color: #f4ecd8;
   border-top: 2px solid #222;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.12);
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  align-items: center;
 }
 
 ion-tab-button {
-  --color: #444;
+  --color: #666;
   --color-selected: #000;
   font-family: 'Old Standard TT', serif;
-  font-weight: 700;
+  font-weight: 900;
   text-transform: uppercase;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  overflow: visible;
+  position: relative;
 }
 
-ion-label {
-  font-size: 0.65rem;
-  letter-spacing: 1px;
-}
-
+/* Base state for icons */
 ion-icon {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  margin-top: 4px;
+}
+
+/* Hide label and scale down unselected */
+ion-tab-button:not(.tab-selected) {
+  flex: 0.7;
+}
+
+ion-tab-button:not(.tab-selected) ion-label {
+  opacity: 0;
+  transform: translateY(10px);
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+ion-tab-button:not(.tab-selected) ion-icon {
+  font-size: 1.2rem;
+  opacity: 0.6;
+}
+
+/* Selected Tab state */
+ion-tab-button.tab-selected {
+  flex: 1.5; /* Grow the selected tab */
+  z-index: 10;
+}
+
+ion-tab-button.tab-selected ion-icon {
+  font-size: 1.8rem;
+  transform: translateY(-5px);
+  opacity: 1;
+  color: #000;
+}
+
+ion-tab-button.tab-selected ion-label {
+  opacity: 1;
+  transform: translateY(0);
+  height: auto;
+  font-size: 0.75rem;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+  color: #000;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Subtle Ink Press Effect */
+ion-tab-button:active ion-icon {
+  transform: scale(0.8) !important;
+  opacity: 0.4;
 }
 </style>

@@ -1,18 +1,67 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
 
+:root {
+  color-scheme: light;
+  --ion-color-step-50: #fdfbf3;
+  --ion-color-step-100: #fcf9ee;
+  --ion-color-step-150: #faf7e9;
+  --ion-color-step-200: #f9f5e4;
+  --ion-color-step-250: #f7f3df;
+  --ion-color-step-300: #f6f1da;
+  --ion-color-step-350: #f5f0d5;
+  --ion-color-step-400: #f3eed0;
+  --ion-color-step-450: #f2eccb;
+  --ion-color-step-500: #f1eac6;
+  --ion-color-step-550: #f0e8c1;
+  --ion-color-step-600: #efe7bc;
+  --ion-color-step-650: #ede5b7;
+  --ion-color-step-700: #ece3b2;
+  --ion-color-step-750: #ebe1ad;
+  --ion-color-step-800: #e9dfa8;
+  --ion-color-step-850: #e8dca3;
+  --ion-color-step-900: #e7da9e;
+  --ion-color-step-950: #e5d899;
+
+  /** Vintage Primary Colors **/
+  --ion-color-primary: #1a1a1a;
+  --ion-color-primary-rgb: 26, 26, 26;
+  --ion-color-primary-contrast: #f4ecd8;
+  --ion-color-primary-contrast-rgb: 244, 236, 216;
+  --ion-color-primary-shade: #171717;
+  --ion-color-primary-tint: #313131;
+
+  /** Vintage Background & Text **/
+  --ion-background-color: #f4ecd8;
+  --ion-background-color-rgb: 244, 236, 216;
+  --ion-text-color: #1a1a1a;
+  --ion-text-color-rgb: 26, 26, 26;
+
+  --ion-item-background: #fdfbf3;
+  --ion-toolbar-background: #f4ecda;
+  --ion-toolbar-color: #1a1a1a;
+
+  --parchment-white: #fdfbf3;
+  --parchment-ink: #1a1a1a;
+}
+
+
+/* Consistent Vintage Paper Theme for all pages */
+/* Redefined variables to ensure parchment look is the default and only state for now */
+
+
 /* VINTAGE TOAST THEME */
 ion-toast {
-  --background: #fdfbf3;
-  --color: #1a1a1a;
-  --button-color: #1a1a1a;
+  --background: var(--parchment-white);
+  --color: var(--parchment-ink);
+  --button-color: var(--parchment-ink);
   --border-radius: 0;
   font-family: 'Old Standard TT', serif;
 }
 
 ion-toast::part(container) {
-  border: 2px solid #1a1a1a;
-  box-shadow: 4px 4px 0 #1a1a1a;
+  border: 2px solid var(--parchment-ink);
+  box-shadow: 4px 4px 0 var(--parchment-ink);
   padding: 5px;
 }
 
@@ -24,21 +73,21 @@ ion-toast::part(message) {
 
 /* VINTAGE ALERT THEME */
 ion-alert {
-  --background: #fdfbf3;
+  --background: var(--parchment-white);
   --backdrop-opacity: 0.6;
 }
 
 ion-alert::part(container) {
-  border: 3px solid #1a1a1a;
+  border: 3px solid var(--parchment-ink);
   border-radius: 0;
-  box-shadow: 8px 8px 0 #1a1a1a;
+  box-shadow: 8px 8px 0 var(--parchment-ink);
   padding: 10px;
 }
 
 ion-alert::part(title) {
   font-family: 'UnifrakturMaguntia', cursive;
   font-size: 2rem;
-  color: #1a1a1a;
+  color: var(--parchment-ink);
 }
 
 ion-alert::part(message) {
@@ -52,12 +101,12 @@ ion-alert::part(button) {
   font-family: 'Old Standard TT', serif;
   font-weight: 900;
   text-transform: uppercase;
-  color: #1a1a1a;
-  border-top: 2px solid #1a1a1a;
+  color: var(--parchment-ink);
+  border-top: 2px solid var(--parchment-ink);
 }
 
 ion-alert::part(button):first-child {
-  border-right: 1px solid #1a1a1a;
+  border-right: 1px solid var(--parchment-ink);
 }
 
 /* VINTAGE REFRESHER THEME */
@@ -71,5 +120,5 @@ ion-refresher-content {
 }
 
 ion-spinner {
-  --color: #1a1a1a;
+  --color: var(--parchment-ink);
 }
