@@ -1,2 +1,75 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
+
+/* VINTAGE TOAST THEME */
+ion-toast {
+  --background: #fdfbf3;
+  --color: #1a1a1a;
+  --button-color: #1a1a1a;
+  --border-radius: 0;
+  font-family: 'Old Standard TT', serif;
+}
+
+ion-toast::part(container) {
+  border: 2px solid #1a1a1a;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  padding: 5px;
+}
+
+ion-toast::part(message) {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* VINTAGE ALERT THEME */
+ion-alert {
+  --background: #fdfbf3;
+  --backdrop-opacity: 0.6;
+}
+
+ion-alert::part(container) {
+  border: 3px solid #1a1a1a;
+  border-radius: 0;
+  box-shadow: 8px 8px 0 #1a1a1a;
+  padding: 10px;
+}
+
+ion-alert::part(title) {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 2rem;
+  color: #1a1a1a;
+}
+
+ion-alert::part(message) {
+  font-family: 'EB Garamond', serif;
+  font-size: 1.1rem;
+  color: #222;
+  text-align: justify;
+}
+
+ion-alert::part(button) {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  border-top: 2px solid #1a1a1a;
+}
+
+ion-alert::part(button):first-child {
+  border-right: 1px solid #1a1a1a;
+}
+
+/* VINTAGE REFRESHER THEME */
+ion-refresher-content {
+  --color: #555;
+  /* Subtle but readable ink */
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+ion-spinner {
+  --color: #1a1a1a;
+}

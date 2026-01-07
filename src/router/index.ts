@@ -5,7 +5,14 @@ import TabsPage from '../views/TabsPage.vue'
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/tabs/tab1'
+    redirect: () => {
+      const hasCompletedOnboarding = localStorage.getItem('has_completed_onboarding');
+      return hasCompletedOnboarding ? '/tabs/tab1' : '/onboarding';
+    }
+  },
+  {
+    path: '/onboarding',
+    component: () => import('@/views/OnboardingPage.vue')
   },
   {
     path: '/tabs/',
@@ -26,6 +33,10 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'tab3',
         component: () => import('@/views/Tab3Page.vue')
+      },
+      {
+        path: 'tab4',
+        component: () => import('@/views/Tab4Page.vue')
       }
     ]
   }
@@ -35,5 +46,17 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
+
+router.beforeEach((to, from, next) => {
+  const hasCompletedOnboarding = localStorage.getItem('has_completed_onboarding');
+
+  if (to.path !== '/onboarding' && !hasCompletedOnboarding) {
+    next('/onboarding');
+  } else if (to.path === '/onboarding' && hasCompletedOnboarding) {
+    next('/tabs/tab1');
+  } else {
+    next();
+  }
+});
 
 export default router
