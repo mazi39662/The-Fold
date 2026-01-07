@@ -313,8 +313,10 @@ const handleScroll = (event: any) => {
   const scrollTop = event.detail.scrollTop;
   showAppTitle.value = scrollTop > 150;
 
-  // Header height when visible
-  const headerHeight = showAppTitle.value ? 56 : 0;
+  // Header height when visible, accounting for safe area on mobile
+  // We fetch this dynamically to handle orientation changes or different devices
+  const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ion-safe-area-top')) || 0;
+  const headerHeight = showAppTitle.value ? (56 + safeAreaTop) : safeAreaTop;
 
   // Lazy loading - load more when near bottom
   const scrollElement = event.target;
@@ -926,7 +928,7 @@ onMounted(() => {
 }
 
 .masthead {
-  padding: 20px 15px 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 20px) 15px 10px;
   text-align: center;
   color: #1a1a1a;
   background: #f4ecd8;
@@ -999,7 +1001,7 @@ onMounted(() => {
 .article-header-sticky {
   --shrink-ratio: 0;
   position: sticky;
-  top: 0;
+  top: var(--ion-safe-area-top, 0px);
   background: #f4ecda;
   z-index: 10;
   padding: 10px 0;
