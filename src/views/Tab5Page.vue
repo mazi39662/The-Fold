@@ -8,7 +8,7 @@
         <!-- Masthead -->
         <div class="masthead">
           <div class="masthead-top">
-            <span class="masthead-edition">ARCHIVE BUREAU</span>
+            <span class="masthead-edition">APP SETTINGS</span>
             <span class="masthead-price">VOL. I</span>
           </div>
           <h1 class="settings-title">Settings</h1>
@@ -27,8 +27,8 @@
             
             <div class="setting-row" @click="goToSources">
               <div class="setting-info">
-                <h3 class="setting-name">Configure Wires</h3>
-                <p class="setting-desc">Select the agencies that supply your news.</p>
+                <h3 class="setting-name">Manage News Sources</h3>
+                <p class="setting-desc">Choose which news websites you want to follow.</p>
               </div>
               <ion-icon :icon="libraryOutline" class="setting-icon"></ion-icon>
             </div>
@@ -38,14 +38,44 @@
             <div class="article-separator"></div>
           </section>
 
+          <!-- Contact Section -->
+          <section class="settings-section">
+            <h2 class="section-title">CONTACT & SUPPORT</h2>
+            
+            <div class="setting-row" @click="contactSupport">
+              <div class="setting-info">
+                <h3 class="setting-name">Help & Contact Page</h3>
+                <p class="setting-desc">Visit our official website for support and inquiries.</p>
+              </div>
+              <ion-icon :icon="globeOutline" class="setting-icon"></ion-icon>
+            </div>
+
+            <div class="setting-row" @click="openPrivacy">
+              <div class="setting-info">
+                <h3 class="setting-name">Privacy Policy</h3>
+                <p class="setting-desc">Our commitment to your data security.</p>
+              </div>
+              <ion-icon :icon="shieldCheckmarkOutline" class="setting-icon"></ion-icon>
+            </div>
+
+            <div class="contact-details">
+              <div class="credit-item">
+                <h4 class="credit-heading">Support Email</h4>
+                <p class="credit-text">cypherstudioindie@gmail.com</p>
+              </div>
+            </div>
+
+            <div class="article-separator"></div>
+          </section>
+
           <!-- Information Section -->
           <section class="settings-section">
-            <h2 class="section-title">INFORMATION</h2>
+            <h2 class="section-title">ABOUT</h2>
             
             <div class="setting-row" @click="showCredits = !showCredits">
               <div class="setting-info">
-                <h3 class="setting-name">Application Credits</h3>
-                <p class="setting-desc">The hands that built the press.</p>
+                <h3 class="setting-name">App Credits</h3>
+                <p class="setting-desc">Credits and information about our data sources.</p>
               </div>
               <ion-icon :icon="showCredits ? chevronUpOutline : chevronDownOutline" class="setting-icon"></ion-icon>
             </div>
@@ -68,8 +98,8 @@
 
             <div class="setting-row" @click="showAbout">
               <div class="setting-info">
-                <h3 class="setting-name">What is The Fold?</h3>
-                <p class="setting-desc">The history and philosophy behind our name.</p>
+                <h3 class="setting-name">About The Fold</h3>
+                <p class="setting-desc">Learn about the history and name of this app.</p>
               </div>
               <ion-icon :icon="informationCircleOutline" class="setting-icon"></ion-icon>
             </div>
@@ -77,9 +107,11 @@
             <div class="article-separator"></div>
           </section>
 
+          
+
           <!-- Press Gallery Section -->
           <section class="settings-section">
-            <p class="correspondent-note">A registry of our global correspondents and wire services.</p>
+            <p class="correspondent-note">A list of all the news sources we provide.</p>
             <div class="logo-cloud">
               <div v-for="source in newsSources" :key="source.domain" class="source-logo-item">
                 <div class="icon-wrapper">
@@ -115,13 +147,31 @@ import {
   libraryOutline,
   informationCircleOutline,
   chevronDownOutline,
-  chevronUpOutline
+  chevronUpOutline,
+  mailOutline,
+  shieldCheckmarkOutline,
+  globeOutline
 } from 'ionicons/icons';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const showCredits = ref(false);
+
+onMounted(() => {
+  const handleTabRefresh = (event: any) => {
+    if (event.detail.tab === 'tab5') {
+      const content = document.querySelector('ion-content');
+      if (content) content.scrollToTop(500);
+      showCredits.value = false; // Reset expandable sections on refresh
+    }
+  };
+  window.addEventListener('refresh-current-tab', handleTabRefresh);
+  
+  onUnmounted(() => {
+    window.removeEventListener('refresh-current-tab', handleTabRefresh);
+  });
+});
 
 const newsSources = [
   { name: 'Manila Times', domain: 'manilatimes.net' },
@@ -173,6 +223,14 @@ const showAbout = async () => {
     buttons: ['DONE']
   });
   await alert.present();
+};
+
+const contactSupport = () => {
+  window.open('https://mazi39662.github.io/franz_portfolio.com/contact.html', '_blank');
+};
+
+const openPrivacy = () => {
+  window.open('https://mazi39662.github.io/franz_portfolio.com/privacy-policy', '_blank');
 };
 </script>
 
@@ -318,6 +376,10 @@ const showAbout = async () => {
   padding: 20px;
   margin: 10px 0;
   border-left: 4px solid var(--ion-text-color);
+}
+
+.contact-details {
+  padding: 10px 0;
 }
 
 .credit-item {

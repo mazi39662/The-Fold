@@ -136,7 +136,7 @@ import {
   waterOutline,
   cloudyNightOutline
 } from 'ionicons/icons';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 
 // Types
 interface DailyForecast {
@@ -245,7 +245,11 @@ const fetchWeather = async () => {
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
           (err) => reject(err),
-          { timeout: 10000 }
+          { 
+            timeout: 10000,
+            enableHighAccuracy: true,
+            maximumAge: 60000
+          }
         );
       });
     };
@@ -257,12 +261,23 @@ const fetchWeather = async () => {
       
       // Get City Name via Reverse Geocoding (OpenStreetMap - Free)
       const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
-        headers: { 'Accept-Language': 'en' }
+        headers: { 
+          'Accept-Language': 'en',
+          'User-Agent': 'TheFoldNewsApp/1.0'
+        }
       });
       const geoData = await geoResp.json();
-      const city = geoData.address.city || geoData.address.town || geoData.address.village || 'STATION';
-      const country = geoData.address.country || 'EARTH';
-      locationName.value = `${city.toUpperCase()}, ${country.toUpperCase()}`;
+      
+      const address = geoData.address;
+      const city = address.city || address.town || address.village || address.suburb || address.city_district || address.county || 'STATION';
+      const state = address.state || address.region;
+      const country = address.country || 'EARTH';
+      
+      if (state) {
+        locationName.value = `${city.toUpperCase()}, ${state.toUpperCase()}`;
+      } else {
+        locationName.value = `${city.toUpperCase()}, ${country.toUpperCase()}`;
+      }
     } catch (e) {
       console.warn('High-accuracy signals lost. Falling back to IP detection.');
       // Fallback to IP Geolocation
@@ -271,7 +286,11 @@ const fetchWeather = async () => {
       if (locData.latitude && locData.longitude) {
         lat = locData.latitude;
         lon = locData.longitude;
-        locationName.value = `${locData.city?.toUpperCase() || 'STATION'}, ${locData.country_name?.toUpperCase() || 'WIRE'}`;
+        if (locData.city && (locData.region || locData.country_name)) {
+          locationName.value = locData.region 
+            ? `${locData.city.toUpperCase()}, ${locData.region.toUpperCase()}` 
+            : `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
+        }
       }
     }
 
@@ -322,6 +341,19 @@ const handleRefresh = async (event: any) => {
 
 onMounted(() => {
   fetchWeather();
+
+  const handleTabRefresh = (event: any) => {
+    if (event.detail.tab === 'tab3') {
+      fetchWeather();
+      const content = document.querySelector('ion-content');
+      if (content) content.scrollToTop(500);
+    }
+  };
+  window.addEventListener('refresh-current-tab', handleTabRefresh);
+  
+  onUnmounted(() => {
+    window.removeEventListener('refresh-current-tab', handleTabRefresh);
+  });
 });
 </script>
 

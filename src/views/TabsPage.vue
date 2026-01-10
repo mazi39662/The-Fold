@@ -3,27 +3,27 @@
     <ion-tabs>
       <ion-router-outlet></ion-router-outlet>
       <ion-tab-bar slot="bottom" class="vintage-tab-bar">
-        <ion-tab-button tab="tab1" href="/tabs/tab1">
+        <ion-tab-button tab="tab1" href="/tabs/tab1" @click="handleTabClick('tab1')">
           <ion-icon aria-hidden="true" :icon="newspaperOutline" />
           <ion-label>News Feed</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab3" href="/tabs/tab3">
+        <ion-tab-button tab="tab3" href="/tabs/tab3" @click="handleTabClick('tab3')">
           <ion-icon aria-hidden="true" :icon="cloudyOutline" />
           <ion-label>Weather</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab2" href="/tabs/tab2">
+        <ion-tab-button tab="tab2" href="/tabs/tab2" @click="handleTabClick('tab2')">
           <ion-icon aria-hidden="true" :icon="bookmarkOutline" />
           <ion-label>Collection</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab4" href="/tabs/tab4">
+        <!-- <ion-tab-button tab="tab4" href="/tabs/tab4" @click="handleTabClick('tab4')">
           <ion-icon aria-hidden="true" :icon="libraryOutline" />
           <ion-label>Sources</ion-label>
-        </ion-tab-button>
+        </ion-tab-button> -->
 
-        <ion-tab-button tab="tab5" href="/tabs/tab5">
+        <ion-tab-button tab="tab5" href="/tabs/tab5" @click="handleTabClick('tab5')">
           <ion-icon aria-hidden="true" :icon="settingsOutline" />
           <ion-label>Settings</ion-label>
         </ion-tab-button>
@@ -35,6 +35,19 @@
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
 import { newspaperOutline, bookmarkOutline, libraryOutline, cloudyOutline, settingsOutline } from 'ionicons/icons';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+
+const handleTabClick = (tab: string) => {
+  const currentPath = route.path;
+  const targetPath = `/tabs/${tab}`;
+  
+  if (currentPath === targetPath) {
+    // If we're already on this tab, trigger a refresh event
+    window.dispatchEvent(new CustomEvent('refresh-current-tab', { detail: { tab } }));
+  }
+};
 </script>
 
 <style scoped>

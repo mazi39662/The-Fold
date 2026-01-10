@@ -69,8 +69,9 @@
               <h2 class="article-title">{{ item.title }}</h2>
               
               <div class="article-meta">
-                <span class="byline" v-if="item.creator">By {{ item.creator }}</span>
-                <span class="dateline">{{ formatDate(item.pubDate) }}</span>
+                <span class="source-tag">{{ item.source }}</span>
+                <span class="byline" v-if="item.creator"> • By {{ item.creator }}</span>
+                <span class="dateline"> • {{ formatDate(item.pubDate) }}</span>
               </div>
 
               <!-- Action Buttons for articles WITHOUT images -->
@@ -232,7 +233,7 @@ import {
   chevronDownCircleOutline,
   close
 } from 'ionicons/icons';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 interface NewsMedia {
@@ -310,21 +311,34 @@ const updateWeatherAndLocation = async () => {
     // 1. Try Precise Geolocation First
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 60000 
+        });
       });
       lat = position.coords.latitude;
       lon = position.coords.longitude;
       
       // Reverse Geocoding for accurate city name
       const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
-        headers: { 'Accept-Language': 'en' }
+        headers: { 
+          'Accept-Language': 'en',
+          'User-Agent': 'TheFoldNewsApp/1.0'
+        }
       });
       const geoData = await geoResp.json();
-      const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.suburb;
-      const country = geoData.address.country;
       
-      if (city && country) {
-        currentLocation.value = `${city.toUpperCase()}, ${country.toUpperCase()}`;
+      // Extract the most recognizable location name
+      const address = geoData.address;
+      const city = address.city || address.town || address.village || address.suburb || address.city_district || address.county;
+      const state = address.state || address.region;
+      const country = address.country;
+      
+      if (city && (state || country)) {
+        currentLocation.value = state ? `${city.toUpperCase()}, ${state.toUpperCase()}` : `${city.toUpperCase()}, ${country.toUpperCase()}`;
+      } else if (country) {
+        currentLocation.value = country.toUpperCase();
       }
     } catch (geoErr) {
       console.warn('GPS Signal unavailable, falling back to IP based detection.');
@@ -334,8 +348,10 @@ const updateWeatherAndLocation = async () => {
         const locData = await locResponse.json();
         lat = locData.latitude;
         lon = locData.longitude;
-        if (locData.city && locData.country_name) {
-          currentLocation.value = `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
+        if (locData.city && (locData.region || locData.country_name)) {
+          currentLocation.value = locData.region 
+            ? `${locData.city.toUpperCase()}, ${locData.region.toUpperCase()}` 
+            : `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
         }
       }
     }
@@ -658,17 +674,26 @@ const fetchNews = async () => {
     // Flatten and merge all articles
     const allArticles = allFeedResults.flat();
     
+    // Filter articles to be less than 3 months old (Google Play News Policy)
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    const freshArticles = allArticles.filter(a => {
+      const pubDate = new Date(a.pubDate);
+      return isNaN(pubDate.getTime()) || pubDate >= threeMonthsAgo;
+    });
+
     // Sort by publication date (newest first)
-    allArticles.sort((a, b) => {
+    freshArticles.sort((a, b) => {
       const dateA = new Date(a.pubDate).getTime() || 0;
       const dateB = new Date(b.pubDate).getTime() || 0;
       return dateB - dateA;
     });
     
-    newsItems.value = allArticles;
+    newsItems.value = freshArticles;
     
     // Save to cache
-    setCache(feedUrls, allArticles);
+    setCache(feedUrls, freshArticles);
     
     // Update current source based on articles
     if (allArticles.length > 0) {
@@ -720,15 +745,24 @@ const fetchFreshNews = async (feedUrls: string[]) => {
     const allFeedResults = await Promise.all(fetchPromises);
     const allArticles = allFeedResults.flat();
     
-    allArticles.sort((a, b) => {
+    // Filter articles to be less than 3 months old
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    const freshArticles = allArticles.filter(a => {
+      const pubDate = new Date(a.pubDate);
+      return isNaN(pubDate.getTime()) || pubDate >= threeMonthsAgo;
+    });
+    
+    freshArticles.sort((a, b) => {
       const dateA = new Date(a.pubDate).getTime();
       const dateB = new Date(b.pubDate).getTime();
       return dateB - dateA;
     });
     
     // Update with fresh data
-    newsItems.value = allArticles;
-    setCache(feedUrls, allArticles);
+    newsItems.value = freshArticles;
+    setCache(feedUrls, freshArticles);
     
     if (allArticles.length > 0) {
       const sources = allArticles.map(a => a.source);
@@ -986,6 +1020,23 @@ onMounted(() => {
   window.addEventListener('rss-feeds-updated', () => {
     fetchNews();
   });
+
+  // Listen for double-click/re-click refresh from TabsPage
+  const handleTabRefresh = (event: any) => {
+    if (event.detail.tab === 'tab1') {
+      fetchNews();
+      updateWeatherAndLocation();
+      
+      // Also scroll to top for better UX
+      const content = document.querySelector('ion-content');
+      if (content) content.scrollToTop(500);
+    }
+  };
+  window.addEventListener('refresh-current-tab', handleTabRefresh);
+  
+  onUnmounted(() => {
+    window.removeEventListener('refresh-current-tab', handleTabRefresh);
+  });
 });
 </script>
 
@@ -1149,6 +1200,13 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 1px;
   /* Keep author and date visible during scroll */
+}
+
+.source-tag {
+  font-weight: 900;
+  color: var(--ion-color-primary, #000);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .byline {

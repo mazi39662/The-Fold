@@ -60,8 +60,9 @@
                 <h2 class="article-title">{{ item.title }}</h2>
                 
                 <div class="article-meta">
-                  <span class="byline" v-if="item.creator">By {{ item.creator }}</span>
-                  <span class="dateline">{{ formatDate(item.pubDate) }}</span>
+                  <span class="source-tag">{{ item.source }}</span>
+                  <span class="byline" v-if="item.creator"> • By {{ item.creator }}</span>
+                  <span class="dateline"> • {{ formatDate(item.pubDate) }}</span>
                 </div>
 
                 <div class="article-album-container" v-if="item.media && item.media.length > 0">
@@ -187,7 +188,7 @@ import {
   IonRefresherContent
 } from '@ionic/vue';
 import { chevronDownCircleOutline } from 'ionicons/icons';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 
 interface NewsMedia {
   type: 'image' | 'video';
@@ -323,6 +324,22 @@ const handleScroll = (event: any) => {
 onMounted(() => {
   loadSavedArticles();
   loadLikedArticles();
+
+  const handleTabRefresh = (event: any) => {
+    if (event.detail.tab === 'tab2') {
+      loadSavedArticles();
+      loadLikedArticles();
+      savedPage.value = 1;
+      likedPage.value = 1;
+      const content = document.querySelector('ion-content');
+      if (content) content.scrollToTop(500);
+    }
+  };
+  window.addEventListener('refresh-current-tab', handleTabRefresh);
+  
+  onUnmounted(() => {
+    window.removeEventListener('refresh-current-tab', handleTabRefresh);
+  });
   
   window.addEventListener('storage', () => {
     loadSavedArticles();
@@ -511,6 +528,13 @@ ion-segment-button.segment-button-checked ion-label {
   justify-content: space-between;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.source-tag {
+  font-weight: 900;
+  color: var(--ion-color-primary, #000);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .byline {
