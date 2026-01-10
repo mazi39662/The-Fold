@@ -84,6 +84,7 @@ ion-alert::part(container) {
   padding: 10px;
 }
 
+/* Base Part Styles */
 ion-alert::part(title) {
   font-family: 'UnifrakturMaguntia', cursive;
   font-size: 2rem;
@@ -91,9 +92,10 @@ ion-alert::part(title) {
 }
 
 ion-alert::part(message) {
-  font-family: 'EB Garamond', serif;
-  font-size: 1.1rem;
-  color: #222;
+  font-family: 'Old Standard TT', serif;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  color: #1a1a1a;
   text-align: justify;
 }
 
@@ -103,6 +105,42 @@ ion-alert::part(button) {
   text-transform: uppercase;
   color: var(--parchment-ink);
   border-top: 2px solid var(--parchment-ink);
+}
+
+/* Dedicated Class for High-Readability About Dialog */
+.vintage-alert::part(container) {
+  background: #fdfbf3 !important;
+  /* Brightest Parchment */
+  border: 4px solid #000 !important;
+  opacity: 1 !important;
+}
+
+.vintage-alert::part(title) {
+  color: #000 !important;
+  font-family: 'UnifrakturMaguntia', cursive !important;
+  font-size: 2.2217rem !important;
+  font-weight: 900 !important;
+  opacity: 1 !important;
+}
+
+.vintage-alert::part(message) {
+  color: #000 !important;
+  font-family: 'Old Standard TT', serif !important;
+  font-weight: 700 !important;
+  /* Bold for maximum precision */
+  font-size: 1.25rem !important;
+  line-height: 1.6 !important;
+  opacity: 1 !important;
+  text-align: justify !important;
+}
+
+.vintage-alert::part(button) {
+  color: #000 !important;
+  font-family: 'Old Standard TT', serif !important;
+  font-weight: 950 !important;
+  font-size: 1.1rem !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
 }
 
 ion-alert::part(button):first-child {

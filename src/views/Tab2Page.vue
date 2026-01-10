@@ -23,11 +23,11 @@
         <div class="masthead-top">
           <span class="masthead-date">{{ currentFormattedDate }}</span>
           <span class="masthead-edition">PERSONAL ARCHIVES</span>
-          <span class="masthead-price">VOL. I</span>
+          <span class="masthead-price">VER. {{ APP_CONFIG.VERSION }}</span>
         </div>
         <h1 class="collection-title">My Collection</h1>
         <div class="masthead-bottom">
-          <div class="motto">"Preserving the dispatches of the day"</div>
+          <div class="motto">{{ APP_CONFIG.MOTTO }}</div>
           <div class="article-count">{{ savedArticles.length + likedArticles.length }} ITEMS CATALOGED</div>
         </div>
       </div>
@@ -189,6 +189,7 @@ import {
 } from '@ionic/vue';
 import { chevronDownCircleOutline } from 'ionicons/icons';
 import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { APP_CONFIG } from '@/config/appConfig';
 
 interface NewsMedia {
   type: 'image' | 'video';
@@ -374,12 +375,9 @@ onMounted(() => {
 }
 
 .mini-title {
-  font-family: 'Old Standard TT', serif;
-  font-weight: 900;
-  font-size: 1rem;
-  letter-spacing: 3px;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 1.5rem;
   text-align: center;
-  text-transform: uppercase;
 }
 
 .header-fade {
@@ -412,13 +410,12 @@ onMounted(() => {
 }
 
 .collection-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 3rem;
-  font-weight: 900;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 3.5rem;
   margin: 10px 0;
-  text-transform: uppercase;
   color: var(--ion-text-color);
   line-height: 1;
+  letter-spacing: -1px;
 }
 
 .masthead-bottom {

@@ -27,7 +27,6 @@
         <h1 class="weather-title">Weather Bulletin</h1>
         <div class="masthead-bottom">
           <div class="weather-condition">{{ weatherData?.current?.condition || 'OBSERVING...' }}</div>
-          <div class="motto">"Clear skies and Fair winds"</div>
           <div class="location">{{ locationName || 'FINDING STATION...' }}</div>
         </div>
       </div>
@@ -137,6 +136,7 @@ import {
   cloudyNightOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { sharedWeatherState, updateSharedWeather } from '@/services/weatherService';
 
 // Types
 interface DailyForecast {
@@ -169,7 +169,7 @@ interface WeatherState {
 const loading = ref(true);
 const error = ref<string | null>(null);
 const weatherData = ref<WeatherState | null>(null);
-const locationName = ref('');
+const locationName = computed(() => sharedWeatherState.value.location);
 const showHeaderTitle = ref(false);
 
 // Computed
@@ -233,68 +233,10 @@ const fetchWeather = async () => {
   error.value = null;
 
   try {
-    // 1. Get Location (Browser Geolocation API First)
-    let lat = 14.5995, lon = 120.9842; // Manila defaults
-    
-    const getCoords = () => {
-      return new Promise<{lat: number, lon: number}>((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject('Geolocation not supported');
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-          (err) => reject(err),
-          { 
-            timeout: 10000,
-            enableHighAccuracy: true,
-            maximumAge: 60000
-          }
-        );
-      });
-    };
+    await updateSharedWeather();
+    const lat = sharedWeatherState.value.lat;
+    const lon = sharedWeatherState.value.lon;
 
-    try {
-      const coords = await getCoords();
-      lat = coords.lat;
-      lon = coords.lon;
-      
-      // Get City Name via Reverse Geocoding (OpenStreetMap - Free)
-      const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
-        headers: { 
-          'Accept-Language': 'en',
-          'User-Agent': 'TheFoldNewsApp/1.0'
-        }
-      });
-      const geoData = await geoResp.json();
-      
-      const address = geoData.address;
-      const city = address.city || address.town || address.village || address.suburb || address.city_district || address.county || 'STATION';
-      const state = address.state || address.region;
-      const country = address.country || 'EARTH';
-      
-      if (state) {
-        locationName.value = `${city.toUpperCase()}, ${state.toUpperCase()}`;
-      } else {
-        locationName.value = `${city.toUpperCase()}, ${country.toUpperCase()}`;
-      }
-    } catch (e) {
-      console.warn('High-accuracy signals lost. Falling back to IP detection.');
-      // Fallback to IP Geolocation
-      const locResponse = await fetch('https://ipapi.co/json/');
-      const locData = await locResponse.json();
-      if (locData.latitude && locData.longitude) {
-        lat = locData.latitude;
-        lon = locData.longitude;
-        if (locData.city && (locData.region || locData.country_name)) {
-          locationName.value = locData.region 
-            ? `${locData.city.toUpperCase()}, ${locData.region.toUpperCase()}` 
-            : `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
-        }
-      }
-    }
-
-    // 2. Get Weather
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
     const response = await fetch(weatherUrl);
     if (!response.ok) throw new Error('WIRE SIGNAL INTERRUPTED');
@@ -311,12 +253,12 @@ const fetchWeather = async () => {
         condition: getWeatherDesc(data.current.weather_code)
       },
       hourly: data.hourly.time.slice(0, 24).map((time: string, i: number) => ({
-        time,
+        time: time,
         temperature: data.hourly.temperature_2m[i],
         weatherCode: data.hourly.weather_code[i]
       })),
       daily: data.daily.time.map((time: string, i: number) => ({
-        time,
+        time: time,
         weatherCode: data.daily.weather_code[i],
         tempMax: data.daily.temperature_2m_max[i],
         tempMin: data.daily.temperature_2m_min[i]
@@ -408,12 +350,10 @@ onMounted(() => {
 }
 
 .weather-title {
-  font-family: 'Playfair Display', serif;
-  font-size: min(10vw, 3.2rem);
-  font-weight: 900;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 3.5rem;
   margin: 5px 0;
   letter-spacing: -1px;
-  text-transform: uppercase;
   color: var(--ion-text-color);
   line-height: 1;
 }
@@ -432,17 +372,13 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.motto {
-  font-style: italic;
-  font-weight: 400;
-}
 
 /* Current Section */
 .current-main {
   display: flex;
   justify-content: space-evenly;
   align-items: center;
-  padding-bottom: 20px;
+  padding: 15px;
 }
 
 .temp-display {
@@ -616,7 +552,6 @@ onMounted(() => {
   height: 4px;
   border-top: 1px solid var(--ion-text-color);
   border-bottom: 1px solid var(--ion-text-color);
-  margin: 20px 0;
 }
 
 /* Sticky Header */
@@ -627,10 +562,9 @@ onMounted(() => {
 }
 
 .mini-title {
-  font-family: 'Old Standard TT', serif;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 1.5rem;
+  text-align: center;
 }
 
 .header-fade {

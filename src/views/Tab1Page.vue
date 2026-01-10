@@ -23,13 +23,13 @@
       <div class="masthead">
         <div class="masthead-top">
           <span class="masthead-date">{{ currentFormattedDate }}</span>
-          <span class="masthead-edition">DAILY EDITION</span>
-          <span class="masthead-price">VOL. {{ currentVolume }}</span>
+          <span class="masthead-edition">{{ APP_CONFIG.EDITION }}</span>
+          <span class="masthead-price">VER. {{ currentVolume }}</span>
         </div>
         <h1 class="newspaper-title">The Fold</h1>
         <div class="masthead-bottom">
           <div class="weather">{{ currentWeather }}</div>
-          <div class="motto">"All the News That's Fit to Feed"</div>
+          <div class="motto">{{ APP_CONFIG.MOTTO }}</div>
           <div class="location">{{ currentLocation }}</div>
         </div>
       </div>
@@ -65,11 +65,16 @@
         >
           <div class="article-inner">
             <!-- Sticky Article Information -->
-            <div class="article-header-sticky">
+            <div 
+              class="article-header-sticky"
+              :class="{ 'has-media': item.media && item.media.length > 0 }"
+              @touchstart="handleHeaderTouchStart"
+              @touchmove="handleHeaderTouchMove"
+              @touchend="handleHeaderTouchEnd($event, index)"
+            >
               <h2 class="article-title">{{ item.title }}</h2>
               
               <div class="article-meta">
-                <span class="source-tag">{{ item.source }}</span>
                 <span class="byline" v-if="item.creator"> • By {{ item.creator }}</span>
                 <span class="dateline"> • {{ formatDate(item.pubDate) }}</span>
               </div>
@@ -235,6 +240,8 @@ import {
 } from 'ionicons/icons';
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { APP_CONFIG } from '@/config/appConfig';
+import { sharedWeatherState, updateSharedWeather } from '@/services/weatherService';
 
 interface NewsMedia {
   type: 'image' | 'video';
@@ -265,8 +272,12 @@ const currentPage = ref(1);
 const itemsPerPage = 20;
 const loadingMore = ref(false);
 const fullscreenImage = ref<string | null>(null);
-const currentLocation = ref('MANILA, PHILIPPINES');
-const currentWeather = ref('FAIR & SUNNY');
+const currentLocation = computed(() => sharedWeatherState.value.location);
+const currentWeather = computed(() => sharedWeatherState.value.condition);
+
+const touchStartY = ref(0);
+const touchStartX = ref(0);
+let isHeaderTouch = false;
 
 const router = useRouter();
 
@@ -286,101 +297,13 @@ const currentFormattedDate = computed(() => {
 });
 
 const currentVolume = computed(() => {
-  // Foundation set to 1849 (2026 - 1849 + 1 = 178)
-  const currentYear = new Date().getFullYear();
-  const volumeNumber = currentYear - 1849 + 1;
-  return romanize(volumeNumber);
+  return APP_CONFIG.VERSION;
 });
 
-function romanize(num: number) {
-  const lookup: Record<string, number> = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
-  let roman = '';
-  for (const i in lookup) {
-    while (num >= lookup[i]) {
-      roman += i;
-      num -= lookup[i];
-    }
-  }
-  return roman;
-}
 
-const updateWeatherAndLocation = async () => {
-  try {
-    let lat, lon;
-    
-    // 1. Try Precise Geolocation First
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { 
-          timeout: 10000,
-          enableHighAccuracy: true,
-          maximumAge: 60000 
-        });
-      });
-      lat = position.coords.latitude;
-      lon = position.coords.longitude;
-      
-      // Reverse Geocoding for accurate city name
-      const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
-        headers: { 
-          'Accept-Language': 'en',
-          'User-Agent': 'TheFoldNewsApp/1.0'
-        }
-      });
-      const geoData = await geoResp.json();
-      
-      // Extract the most recognizable location name
-      const address = geoData.address;
-      const city = address.city || address.town || address.village || address.suburb || address.city_district || address.county;
-      const state = address.state || address.region;
-      const country = address.country;
-      
-      if (city && (state || country)) {
-        currentLocation.value = state ? `${city.toUpperCase()}, ${state.toUpperCase()}` : `${city.toUpperCase()}, ${country.toUpperCase()}`;
-      } else if (country) {
-        currentLocation.value = country.toUpperCase();
-      }
-    } catch (geoErr) {
-      console.warn('GPS Signal unavailable, falling back to IP based detection.');
-      // 2. Fallback: IP-based location
-      const locResponse = await fetch('https://ipapi.co/json/');
-      if (locResponse.ok) {
-        const locData = await locResponse.json();
-        lat = locData.latitude;
-        lon = locData.longitude;
-        if (locData.city && (locData.region || locData.country_name)) {
-          currentLocation.value = locData.region 
-            ? `${locData.city.toUpperCase()}, ${locData.region.toUpperCase()}` 
-            : `${locData.city.toUpperCase()}, ${locData.country_name.toUpperCase()}`;
-        }
-      }
-    }
 
-    // 3. Get Real Weather using final coordinates
-    if (lat && lon) {
-      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`);
-      const weatherData = await weatherResponse.json();
-      const code = weatherData.current.weather_code;
-
-      const weatherMap: Record<number, string> = {
-        0: 'FAIR & CLOUDLESS',
-        1: 'FAIR & SUNNY',
-        2: 'PARTLY CLOUDY',
-        3: 'OVERCAST',
-        45: 'MISTY MORNING',
-        48: 'FOGGY CONDITIONS',
-        51: 'LIGHT DRIZZLE',
-        61: 'STEADY RAIN',
-        80: 'HEAVY SHOWERS',
-        95: 'STORMY WINDS'
-      };
-
-      currentWeather.value = weatherMap[code] || (code > 60 ? 'RAINING HEAVILY' : 'FAIR & SUNNY');
-    }
-  } catch (e) {
-    console.error('Weather/Location wire failure. Defaulting to heritage data.');
-  }
-};
+// Methods
+const updateWeatherAndLocation = updateSharedWeather;
 
 // Methods
 const handleScroll = (event: any) => {
@@ -446,62 +369,7 @@ const handleScroll = (event: any) => {
 };
 
 // Helper to extract source name from URL
-const getSourceName = (url: string): string => {
-  const sourceMap: Record<string, string> = {
-    'manilatimes.net': 'The Manila Times',
-    'philstar.com': 'Philstar',
-    'gmanetwork.com': 'GMA News',
-    'abs-cbn.com': 'ABS-CBN News',
-    'rappler.com': 'Rappler',
-    'inquirer.net': 'Inquirer',
-    'mb.com.ph': 'Manila Bulletin',
-    'bbci.co.uk': 'BBC News',
-    'bbc.com': 'BBC News',
-    'reuters': 'Reuters',
-    'aljazeera.com': 'Al Jazeera',
-    'theguardian.com': 'The Guardian',
-    'cnn.com': 'CNN',
-    'nytimes.com': 'New York Times',
-    'techcrunch.com': 'TechCrunch',
-    'theverge.com': 'The Verge',
-    'arstechnica.com': 'Ars Technica',
-    'wired.com': 'Wired',
-    'engadget.com': 'Engadget',
-    'mashable.com': 'Mashable',
-    'ft.com': 'Financial Times',
-    'bloomberg.com': 'Bloomberg',
-    'forbes.com': 'Forbes',
-    'wsj.com': 'Wall Street Journal',
-    'dj.com': 'Wall Street Journal',
-    'espn.com': 'ESPN',
-    'scientificamerican.com': 'Scientific American',
-    'nature.com': 'Nature',
-    'who.int': 'WHO',
-    'variety.com': 'Variety',
-    'hollywoodreporter.com': 'The Hollywood Reporter',
-    'npr.org': 'NPR'
-  };
-  
-  for (const [key, value] of Object.entries(sourceMap)) {
-    if (url.toLowerCase().includes(key)) {
-      return value;
-    }
-  }
-  
-  // Dynamic fallback: extract the domain name
-  try {
-    const hostname = new URL(url).hostname;
-    const parts = hostname.replace('www.', '').split('.');
-    if (parts.length > 0) {
-      const name = parts[0];
-      return name.charAt(0).toUpperCase() + name.slice(1);
-    }
-  } catch (e) {
-    // If URL parsing fails, just return generic
-  }
-  
-  return 'News Wire';
-};
+
 
 // Professional Caching System
 const CACHE_KEY = 'news_cache';
@@ -649,7 +517,7 @@ const fetchNews = async () => {
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         
         const items = xmlDoc.querySelectorAll('item');
-        const sourceName = getSourceName(url);
+        const sourceName = APP_CONFIG.getSourceName(url);
         return Array.from(items).map(item => {
           return {
             title: item.querySelector('title')?.textContent || '',
@@ -723,7 +591,7 @@ const fetchFreshNews = async (feedUrls: string[]) => {
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         
         const items = xmlDoc.querySelectorAll('item');
-        const sourceName = getSourceName(url);
+        const sourceName = APP_CONFIG.getSourceName(url);
         return Array.from(items).map(item => {
           return {
             title: item.querySelector('title')?.textContent || '',
@@ -796,68 +664,106 @@ const cleanDescription = (desc: string) => {
 const extractMedia = (item: Element): NewsMedia[] => {
   const mediaItems: NewsMedia[] = [];
   
-  // 1. Check media:content
-  const mediaContents = item.getElementsByTagName('media:content');
-  for (let i = 0; i < mediaContents.length; i++) {
-    const url = mediaContents[i].getAttribute('url');
-    const type = mediaContents[i].getAttribute('type');
-    const medium = mediaContents[i].getAttribute('medium');
+  // Helper to add media and normalize URLs
+  const addMedia = (url: string | null | undefined, type: 'image' | 'video' = 'image') => {
+    if (!url) return;
+    url = url.trim();
+    if (!url || url.length < 10) return;
     
-    if (url) {
-      if (medium === 'video' || (type && type.startsWith('video')) || url.match(/\.(mp4|m3u8|webm|ogg)(\?.*)?$/i)) {
-        mediaItems.push({ type: 'video', url });
-      } else {
-        mediaItems.push({ type: 'image', url });
+    // Normalize URL
+    if (url.startsWith('//')) url = 'https:' + url;
+    
+    // Auto-detect video from URL extension
+    let finalType = type;
+    const isVideo = url.match(/\.(mp4|m3u8|webm|ogg|mov|avi|wmv|flv|m4v|3gp)(\?.*)?$/i);
+    const isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg|avif|bmp|tiff)(\?.*)?$/i);
+    
+    if (isVideo) {
+      finalType = 'video';
+    } else if (!isImage && type === 'image') {
+      // If we don't recognize the extension and it's not a known video, 
+      // check if it's a known non-media URL to avoid false positives
+      if (url.match(/\.(html|php|aspx|jsp|pdf)$/i)) return;
+    }
+    
+    mediaItems.push({ type: finalType, url });
+  };
+
+  // 1. Broad sweep: Check EVERY element and EVERY attribute + Text Content
+  const allElements = item.querySelectorAll('*');
+  allElements.forEach(el => {
+    // A. Check Text Content (covers <thumbimage>URL</thumbimage>, <media:content>URL</media:content>, etc.)
+    const text = el.textContent?.trim();
+    if (text && text.startsWith('http')) {
+      // Only add if it actually looks like an image/video or the tag is a known media tag
+      const isMediaTag = el.tagName.toLowerCase().match(/(image|thumbnail|thumb|media|content|enclosure|photo)/i);
+      const hasMediaExt = text.match(/\.(jpg|jpeg|png|gif|webp|svg|avif|mp4|m3u8|webm|ogg|mov|avi|wmv|flv|m4v)(\?.*)?$/i);
+      
+      if (isMediaTag || hasMediaExt) {
+        addMedia(text);
       }
     }
-  }
-  
-  // 2. Check media:thumbnail (always images)
-  const mediaThumbnails = item.getElementsByTagName('media:thumbnail');
-  for (let i = 0; i < mediaThumbnails.length; i++) {
-    const url = mediaThumbnails[i].getAttribute('url');
-    if (url) mediaItems.push({ type: 'image', url });
-  }
 
-  // 3. Check enclosures
-  const enclosures = item.querySelectorAll('enclosure');
-  enclosures.forEach(enc => {
-    const url = enc.getAttribute('url');
-    const type = enc.getAttribute('type');
-    if (url) {
-      if ((type && type.startsWith('video')) || url.match(/\.(mp4|m3u8|webm|ogg)(\?.*)?$/i)) {
-        mediaItems.push({ type: 'video', url });
-      } else if (!type || type.startsWith('image/')) {
-        mediaItems.push({ type: 'image', url });
+    // B. Check common attributes
+    const mediaAttrs = ['url', 'href', 'src', 'data-src', 'srcset', 'original-src', 'o-src'];
+    mediaAttrs.forEach(attr => {
+      const val = el.getAttribute(attr);
+      if (val && val.trim().startsWith('http')) {
+        addMedia(val);
       }
+    });
+    
+    // C. Check for medium="video" attribute
+    if (el.getAttribute('medium') === 'video') {
+       const url = el.getAttribute('url') || el.getAttribute('href') || el.getAttribute('src') || el.textContent?.trim();
+       if (url) addMedia(url, 'video');
     }
   });
 
-  // 4. Regex fallback for description and content:encoded
-  const description = item.querySelector('description')?.textContent || '';
-  const contentEncoded = item.getElementsByTagName('content:encoded')[0]?.textContent || '';
-  const combinedHtml = description + contentEncoded;
+  // 2. Regex fallback for description and content:encoded
+  // This extracts images/videos embedded within large HTML blocks
+  const contentTags = ['description', 'content:encoded', 'encoded', 'body', 'fulltext'];
+  let combinedHtml = '';
   
-  // Images
-  const imgRegex = /<img[^>]+src="([^">]+)"/gi;
-  let match;
-  while ((match = imgRegex.exec(combinedHtml)) !== null) {
-    if (match[1]) mediaItems.push({ type: 'image', url: match[1] });
-  }
+  contentTags.forEach(tag => {
+    try {
+      const elements = item.getElementsByTagName(tag);
+      for (let i = 0; i < elements.length; i++) {
+        combinedHtml += elements[i].textContent || '';
+      }
+    } catch (e) { /* ignore */ }
+  });
 
-  // Videos
-  const videoRegex = /<video[^>]+src="([^">]+)"/gi;
-  while ((match = videoRegex.exec(combinedHtml)) !== null) {
-    if (match[1]) mediaItems.push({ type: 'video', url: match[1] });
+  if (combinedHtml) {
+    // Image Regex
+    const imgRegex = /<(?:img|source|image)[^>]+(?:src|data-src|srcset|original-src)=["']([^"'>\s]+)[^>]*>/gi;
+    let match;
+    while ((match = imgRegex.exec(combinedHtml)) !== null) {
+      if (match[1]) {
+        const url = match[1].split(',')[0].split(' ')[0];
+        addMedia(url, 'image');
+      }
+    }
+
+    // Video Regex
+    const videoRegex = /<(?:video|embed|iframe)[^>]+(?:src|data-src)=["']([^"'>\s]+)[^>]*>/gi;
+    while ((match = videoRegex.exec(combinedHtml)) !== null) {
+      if (match[1]) addMedia(match[1], 'video');
+    }
   }
   
-  // 5. Deduplicate and filter noise
+  // 3. Deduplicate and filter noise
   const seenUrls = new Set<string>();
   const filtered = mediaItems.filter(m => {
     if (seenUrls.has(m.url)) return false;
     seenUrls.add(m.url);
+    
     const low = m.url.toLowerCase();
-    return !low.includes('pixel') && !low.includes('tracker') && !low.includes('1x1');
+    return !low.includes('pixel') && 
+           !low.includes('tracker') && 
+           !low.includes('log?ic') &&
+           !low.includes('/1x1') &&
+           !low.match(/\/(ad|advert|banner|sprite|placeholder)/);
   });
 
   return filtered;
@@ -892,8 +798,113 @@ const closeFullscreen = () => {
   fullscreenImage.value = null;
 };
 
+const handleHeaderTouchStart = (ev: TouchEvent) => {
+  touchStartY.value = ev.touches[0].clientY;
+  touchStartX.value = ev.touches[0].clientX;
+  isHeaderTouch = true;
+};
+
+const handleHeaderTouchMove = (ev: TouchEvent) => {
+  if (!isHeaderTouch) return;
+  
+  // Jump logic/Scroll prevention should ONLY trigger if the header is currently stuck at the top
+  const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ion-safe-area-top')) || 0;
+  const headerHeight = showAppTitle.value ? (56 + safeAreaTop) : safeAreaTop;
+  const header = ev.currentTarget as HTMLElement;
+  const headerRect = header.getBoundingClientRect();
+
+  // If header has not reached the sticky top position, allow native scroll
+  if (headerRect.top > headerHeight + 5) {
+    return;
+  }
+  
+  const currentY = ev.touches[0].clientY;
+  const currentX = ev.touches[0].clientX;
+  const deltaY = Math.abs(touchStartY.value - currentY);
+  const deltaX = Math.abs(touchStartX.value - currentX);
+  
+  // If moving vertically more than horizontally, prevent native scroll to allow the custom jump behavior
+  if (deltaY > 10 && deltaY > deltaX) {
+    if (ev.cancelable) ev.preventDefault();
+  }
+};
+
+const handleHeaderTouchEnd = (ev: TouchEvent, index: number) => {
+  if (!isHeaderTouch) return;
+
+  // Jump logic should ONLY trigger if the header is currently stuck at the top
+  const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ion-safe-area-top')) || 0;
+  const headerHeight = showAppTitle.value ? (56 + safeAreaTop) : safeAreaTop;
+  const header = ev.currentTarget as HTMLElement;
+  const headerRect = header.getBoundingClientRect();
+
+  // If header has not reached the sticky top position, don't jump (using 5px buffer)
+  if (headerRect.top > headerHeight + 5) {
+    isHeaderTouch = false;
+    return;
+  }
+  
+  const touchEndY = ev.changedTouches[0].clientY;
+  const touchEndX = ev.changedTouches[0].clientX;
+  const deltaY = touchStartY.value - touchEndY; // Positive means scrolling DOWN (finger moving UP)
+  const deltaX = Math.abs(touchStartX.value - touchEndX);
+  
+  // Threshold: 50px vertical swipe
+  // Must be more vertical than horizontal and scrolling downward
+  if (deltaY > 50 && deltaY > deltaX) {
+    scrollToArticle(index + 1);
+  } else if (deltaY < -50 && Math.abs(deltaY) > deltaX) {
+    scrollToArticle(index - 1);
+  }
+  
+  isHeaderTouch = false;
+};
+
+const scrollToArticle = async (index: number) => {
+  if (index < 0 || index >= displayedNewsItems.value.length) return;
+  
+  const el = articleRefs.value[index];
+  if (el) {
+    // Use safe height values for the target scroll position
+    const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ion-safe-area-top')) || 0;
+    const headerHeight = showAppTitle.value ? (56 + safeAreaTop) : safeAreaTop;
+    
+    const content = document.querySelector('ion-content');
+    if (content) {
+      const scrollEl = await (content as any).getScrollElement();
+      const currentScrollTop = scrollEl.scrollTop;
+      const rect = el.getBoundingClientRect();
+      
+      // Calculate target position relative to current scroll
+      const targetTop = currentScrollTop + rect.top - headerHeight;
+      
+      (content as any).scrollToPoint(0, targetTop, 500);
+    }
+  }
+};
+
 const handleRefresh = async (event: any) => {
   currentPage.value = 1; // Reset to first page
+  
+  // Clear cache for current feeds to ensure the new media extraction logic is applied
+  try {
+    const STORAGE_KEY = 'selected_rss_feeds';
+    const savedFeeds = localStorage.getItem(STORAGE_KEY);
+    const feedUrls = savedFeeds 
+      ? JSON.parse(savedFeeds) 
+      : ['https://www.manilatimes.net/news/feed/'];
+    
+    const cacheData = localStorage.getItem(CACHE_KEY);
+    if (cacheData) {
+      const cache = JSON.parse(cacheData);
+      const key = getCacheKey(feedUrls);
+      delete cache[key];
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    }
+  } catch (e) {
+    console.error('Error clearing cache on refresh:', e);
+  }
+
   await fetchNews();
   event.target.complete();
 };
@@ -1163,38 +1174,47 @@ onMounted(() => {
   top: var(--ion-safe-area-top, 0px);
   background: #f4ecda;
   z-index: 10;
-  padding: 10px 0;
-  border-bottom: 1px solid #222;
+  padding: 5px 0; /* Reduced padding */
+  border-bottom: 2px solid #222;
   overflow: hidden;
   transition: padding 0.1s linear, top 0.3s ease;
   display: flex;
   flex-direction: column;
+  height: auto; /* Default: fit content when no image */
+}
+
+.article-header-sticky.has-media {
+  height: 30vh; /* Request: 30% height ONLY when image exists */
+  justify-content: space-between;
 }
 
 .article-title {
   font-family: 'Playfair Display', serif;
   font-weight: 900;
   color: #1a1a1a;
-  margin: 0 0 5px 0;
+  margin: 0 0 2px 0;
   line-height: 1.1;
   text-transform: uppercase;
-  /* Shrink font size */
-  font-size: calc(1.8rem - (0.8rem * var(--shrink-ratio)));
-  transition: font-size 0.1s linear;
+  /* Adjust font size to be more responsive */
+  font-size: clamp(1.1rem, 4vw, 1.6rem); 
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .headline-article .article-title {
-  font-size: 1.8rem;
   text-align: center;
 }
 
 .article-meta {
   font-family: 'Old Standard TT', serif;
-  font-size: calc(0.85rem - (0.2rem * var(--shrink-ratio)));
-  border-top: 2px solid #222;
-  border-bottom: 2px solid #222;
-  padding: calc(6px - (4px * var(--shrink-ratio))) 0;
-  margin-bottom: calc(15px - (10px * var(--shrink-ratio)));
+  font-size: 0.75rem;
+  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
+  padding: 2px 0;
+  margin-bottom: 5px;
   display: flex;
   justify-content: space-between;
   text-transform: uppercase;
@@ -1220,18 +1240,20 @@ onMounted(() => {
 }
 
 .article-album-container {
-  margin-bottom: calc(15px - (10px * var(--shrink-ratio)));
+  flex: 1; /* Allow content to fill the remaining 30vh space */
+  min-height: 0; /* Required for nested absolute/flex heights */
+  margin-bottom: 5px;
   border: 1px solid #222;
-  padding: 2px;
+  padding: 1px;
   background: var(--parchment-white);
-  align-self: center;
-  width: 100%;
+  align-self: stretch;
   position: relative;
   overflow: hidden;
 }
 
 .album-scroller {
   display: flex;
+  height: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none; /* Firefox */
@@ -1244,6 +1266,7 @@ onMounted(() => {
 
 .album-item {
   flex: 0 0 100%;
+  height: 100%;
   scroll-snap-align: start;
   position: relative;
   display: flex;
@@ -1258,24 +1281,23 @@ onMounted(() => {
 
 .vintage-video {
   width: 100%;
-  aspect-ratio: 16/9;
-  max-height: 400px;
+  height: 100%;
+  object-fit: contain;
   background: #000;
-  border: 1px solid #222;
   filter: sepia(0.25) contrast(1.1);
   display: block;
 }
 
 .album-indicator {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  bottom: 5px;
+  right: 5px;
   background: rgba(26, 26, 26, 0.8);
   color: #f4ecd8;
   font-family: 'Old Standard TT', serif;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  padding: 4px 8px;
+  padding: 2px 4px;
   border: 1px solid #f4ecd8;
   letter-spacing: 1px;
   pointer-events: none;
@@ -1284,10 +1306,7 @@ onMounted(() => {
 
 .vintage-image {
   width: 100%;
-  aspect-ratio: 16/9;
-  /* Ensure image remains visible and respectable size even at full shrink */
-  min-height: 120px;
-  max-height: calc(400px * (1 - (var(--shrink-ratio) * 0.5)));
+  height: 100%;
   object-fit: cover;
   filter: sepia(0.6) contrast(1.1) grayscale(0.5);
   display: block;

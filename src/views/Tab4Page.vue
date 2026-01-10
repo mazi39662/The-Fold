@@ -114,9 +114,12 @@ import {
   cashOutline, 
   flaskOutline, 
   filmOutline,
+  gameControllerOutline,
+  trophyOutline,
   chevronDownCircleOutline 
 } from 'ionicons/icons';
 import { ref, computed, onMounted, watch } from 'vue';
+import { APP_CONFIG } from '@/config/appConfig';
 
 interface RSSFeed {
   name: string;
@@ -133,67 +136,7 @@ const searchQuery = ref('');
 const selectedFeeds = ref<string[]>([]);
 const expandedCategories = ref<string[]>(['Philippines News']);
 
-const feedCategories = ref<FeedCategory[]>([
-  {
-    name: 'Philippines News',
-    feeds: [
-      { name: 'Manila Times - Headlines', url: 'https://www.manilatimes.net/news/feed/', description: 'National and local dispatches' },
-      { name: 'Manila Times - Business', url: 'https://www.manilatimes.net/business/feed/', description: 'Markets and commerce news' },
-      { name: 'Philstar - Headlines', url: 'https://www.philstar.com/rss/headlines', description: 'Major stories in the archipelago' },
-      { name: 'Philstar - Nation', url: 'https://www.philstar.com/rss/nation', description: 'Provincial news on the wire' },
-      { name: 'GMA News', url: 'https://www.gmanetwork.com/news/rss', description: 'Serbisyong Totoo dispatches' },
-      { name: 'ABS-CBN News', url: 'https://news.abs-cbn.com/feed', description: 'In the service of the Filipino' },
-      { name: 'Rappler', url: 'https://www.rappler.com/feed', description: 'Independent and fearless journalism' },
-      { name: 'Inquirer.net', url: 'https://www.inquirer.net/fullfeed', description: 'Balanced news, fearless views' },
-      { name: 'Manila Bulletin', url: 'https://mb.com.ph/feed/', description: 'The nation\'s leading newspaper' }
-    ]
-  },
-  {
-    name: 'International News',
-    feeds: [
-      { name: 'BBC News - World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', description: 'Global dispatches from the London wire' },
-      { name: 'Reuters - World News', url: 'https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best', description: 'Instant worldwide reports' },
-      { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml', description: 'Middle East and global perspective' },
-      { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss', description: 'International analysis and reports' },
-      { name: 'CNN International', url: 'http://rss.cnn.com/rss/edition_world.rss', description: 'Worldwide breaking news' },
-      { name: 'NYT - World', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', description: 'Global coverage from New York' }
-    ]
-  },
-  {
-    name: 'Technology',
-    feeds: [
-      { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', description: 'The latest in machines and industry' },
-      { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', description: 'Future technology and culture' },
-      { name: 'Wired', url: 'https://www.wired.com/feed/rss', description: 'Modern technology and its impact' },
-      { name: 'Engadget', url: 'https://www.engadget.com/rss.xml', description: 'Gadgets and hardware reports' },
-      { name: 'Mashable', url: 'https://mashable.com/feeds/rss/all', description: 'Tech, media, and digital trends' }
-    ]
-  },
-  {
-    name: 'Business & Finance',
-    feeds: [
-      { name: 'Financial Times', url: 'https://www.ft.com/?format=rss', description: 'Global financial analysis' },
-      { name: 'Bloomberg - Markets', url: 'https://www.bloomberg.com/feed/podcast/etf-report.xml', description: 'Stock markets and wealth' },
-      { name: 'Forbes - Real Time', url: 'https://www.forbes.com/real-time/feed2/', description: 'Business leadership and news' },
-      { name: 'WSJ - World News', url: 'https://feeds.a.dj.com/rss/RSSWorldNews.xml', description: 'Wall Street international wire' }
-    ]
-  },
-  {
-    name: 'Sports & Leisure',
-    feeds: [
-      { name: 'ESPN - Top News', url: 'https://www.espn.com/espn/rss/news', description: 'Athletic world updates' },
-      { name: 'BBC Sport', url: 'https://feeds.bbci.co.uk/sport/rss.xml', description: 'Sports reporting from across the globe' }
-    ]
-  },
-  {
-    name: 'Science & Health',
-    feeds: [
-      { name: 'Scientific American', url: 'https://www.scientificamerican.com/feed/', description: 'Human discovery and science' },
-      { name: 'Nature News', url: 'https://www.nature.com/nature.rss', description: 'Research and academic dispatches' },
-      { name: 'WHO - Global Health', url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml', description: 'World health updates' }
-    ]
-  }
-]);
+const feedCategories = ref<FeedCategory[]>(APP_CONFIG.FEED_CATEGORIES);
 
 const totalFeeds = computed(() => {
   return feedCategories.value.reduce((sum, cat) => sum + cat.feeds.length, 0);
@@ -268,7 +211,9 @@ const getCategoryIcon = (categoryName: string) => {
     'Technology': hardwareChipOutline,
     'Business & Finance': cashOutline,
     'Science & Health': flaskOutline,
-    'Entertainment & Culture': filmOutline
+    'Entertainment': filmOutline,
+    'Sports': trophyOutline,
+    'Gaming News': gameControllerOutline
   };
   return iconMap[categoryName] || newspaperOutline;
 };

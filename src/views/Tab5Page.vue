@@ -9,11 +9,11 @@
         <div class="masthead">
           <div class="masthead-top">
             <span class="masthead-edition">APP SETTINGS</span>
-            <span class="masthead-price">VOL. I</span>
+            <span class="masthead-price">VER. {{ APP_CONFIG.VERSION }}</span>
           </div>
           <h1 class="settings-title">Settings</h1>
           <div class="masthead-bottom">
-            <div class="motto">"Configuring your daily dispatches"</div>
+            <div class="motto">{{ APP_CONFIG.MOTTO }}</div>
             <div class="date">{{ currentFormattedDate }}</div>
           </div>
         </div>
@@ -92,7 +92,7 @@
               </div>
               <div class="credit-item">
                 <h4 class="credit-heading">News Wires</h4>
-                <p class="credit-text">Comprehensive collection of RSS feeds from: Manila Times, Philstar, GMA News, ABS-CBN News, Rappler, Inquirer, Manila Bulletin, BBC, Reuters, Al Jazeera, The Guardian, CNN, NYT, TechCrunch, The Verge, Wired, Engadget, Mashable, Financial Times, Bloomberg, Forbes, WSJ, ESPN, Scientific American, Nature, and WHO.</p>
+                <p class="credit-text">Comprehensive collection of RSS feeds from: Manila Times, Philstar, GMA News, ABS-CBN News, Rappler, Inquirer, Manila Bulletin, BusinessWorld, BBC, Reuters, Al Jazeera, The Guardian, CNN, NYT, AP News, USA Today, TechCrunch, The Verge, Wired, Engadget, Mashable, CNET, Ars Technica, Financial Times, Bloomberg, Forbes, WSJ, CNBC, The Economist, Variety, THR, TMZ, Rolling Stone, Billboard, ESPN, Sky Sports, CBS Sports, Bleacher Report, IGN, GameSpot, Kotaku, PC Gamer, Polygon, Scientific American, Nature, WHO and NPR.</p>
               </div>
             </div>
 
@@ -123,23 +123,59 @@
           </section>
 
           <footer class="settings-footer">
-            <p class="old-font motto">"All the news that's fit to feed"</p>
-            <p class="version-tag">THE FOLD • VERSION 1.0.0</p>
+            <p class="old-font motto">{{ APP_CONFIG.MOTTO }}</p>
+            <p class="version-tag">THE FOLD • VERSION {{ APP_CONFIG.VERSION }}</p>
           </footer>
         </div>
       </div>
     </ion-content>
+
+    <!-- About The Fold Modal -->
+    <ion-modal :is-open="isAboutModalOpen" @didDismiss="isAboutModalOpen = false" class="about-modal">
+      <div class="modal-parchment">
+        <header class="modal-masthead">
+          <div class="masthead-top">
+            <span class="edition">EST. 2026</span>
+          </div>
+          <h1 class="modal-title">The Fold</h1>
+          <div class="masthead-bottom">
+          </div>
+        </header>
+
+        <div class="modal-body">
+          <h2 class="article-headline">WHAT IS THE FOLD?</h2>
+          <div class="article-separator"></div>
+          <p class="about-text">
+            The Fold is a simple news app that brings together stories from multiple sources in one place, so you don't have to switch between apps or websites. 
+          </p>
+          <p class="about-text">
+            In newspapers, the fold is where the most important stories appear first. The Fold is built around that idea—showing what matters most, clearly and without distractions. 
+          </p>
+          <p class="about-text">
+            All content belongs to its original publishers. Credits are listed in Settings.
+          </p>
+          <div class="article-separator"></div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="done-btn" @click="isAboutModalOpen = false">DONE</button>
+        </footer>
+      </div>
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { 
-  IonPage, 
-  IonHeader, 
-  IonToolbar, 
-  IonTitle, 
+  IonPage,
   IonContent,
   IonIcon,
+  IonModal,
+  IonButtons,
+  IonButton,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
   alertController
 } from '@ionic/vue';
 import { 
@@ -154,9 +190,11 @@ import {
 } from 'ionicons/icons';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { APP_CONFIG } from '@/config/appConfig';
 
 const router = useRouter();
 const showCredits = ref(false);
+const isAboutModalOpen = ref(false);
 
 onMounted(() => {
   const handleTabRefresh = (event: any) => {
@@ -181,25 +219,46 @@ const newsSources = [
   { name: 'Rappler', domain: 'rappler.com' },
   { name: 'Inquirer', domain: 'inquirer.net' },
   { name: 'Manila Bulletin', domain: 'mb.com.ph' },
+  { name: 'BusinessWorld', domain: 'bworldonline.com' },
   { name: 'BBC News', domain: 'bbc.com' },
   { name: 'Reuters', domain: 'reuters.com' },
   { name: 'Al Jazeera', domain: 'aljazeera.com' },
   { name: 'The Guardian', domain: 'theguardian.com' },
   { name: 'CNN', domain: 'cnn.com' },
   { name: 'New York Times', domain: 'nytimes.com' },
+  { name: 'AP News', domain: 'apnews.com' },
+  { name: 'USA Today', domain: 'usatoday.com' },
   { name: 'TechCrunch', domain: 'techcrunch.com' },
   { name: 'The Verge', domain: 'theverge.com' },
   { name: 'Wired', domain: 'wired.com' },
   { name: 'Engadget', domain: 'engadget.com' },
   { name: 'Mashable', domain: 'mashable.com' },
+  { name: 'CNET', domain: 'cnet.com' },
+  { name: 'Ars Technica', domain: 'arstechnica.com' },
   { name: 'Financial Times', domain: 'ft.com' },
   { name: 'Bloomberg', domain: 'bloomberg.com' },
   { name: 'Forbes', domain: 'forbes.com' },
   { name: 'WSJ', domain: 'wsj.com' },
+  { name: 'CNBC', domain: 'cnbc.com' },
+  { name: 'Economist', domain: 'economist.com' },
+  { name: 'Variety', domain: 'variety.com' },
+  { name: 'THR', domain: 'hollywoodreporter.com' },
+  { name: 'TMZ', domain: 'tmz.com' },
+  { name: 'Rolling Stone', domain: 'rollingstone.com' },
+  { name: 'Billboard', domain: 'billboard.com' },
   { name: 'ESPN', domain: 'espn.com' },
+  { name: 'Sky Sports', domain: 'skysports.com' },
+  { name: 'CBS Sports', domain: 'cbssports.com' },
+  { name: 'Bleacher Report', domain: 'bleacherreport.com' },
+  { name: 'IGN', domain: 'ign.com' },
+  { name: 'GameSpot', domain: 'gamespot.com' },
+  { name: 'Kotaku', domain: 'kotaku.com' },
+  { name: 'PC Gamer', domain: 'pcgamer.com' },
+  { name: 'Polygon', domain: 'polygon.com' },
   { name: 'SciAm', domain: 'scientificamerican.com' },
   { name: 'Nature', domain: 'nature.com' },
-  { name: 'WHO', domain: 'who.int' }
+  { name: 'WHO', domain: 'who.int' },
+  { name: 'NPR', domain: 'npr.org' }
 ];
 
 const currentFormattedDate = computed(() => {
@@ -216,13 +275,8 @@ const goToSources = () => {
   router.push('/tabs/tab4');
 };
 
-const showAbout = async () => {
-  const alert = await alertController.create({
-    header: 'What is The Fold?',
-    message: "The Fold is a simple news app that brings together stories from multiple sources in one place, so you don't have to switch between apps or websites. In newspapers, the fold is where the most important stories appear first. The Fold is built around that idea—showing what matters most, clearly and without distractions. All content belongs to its original publishers. Credits are listed in Settings.",
-    buttons: ['DONE']
-  });
-  await alert.present();
+const showAbout = () => {
+  isAboutModalOpen.value = true;
 };
 
 const contactSupport = () => {
@@ -270,10 +324,8 @@ const openPrivacy = () => {
 }
 
 .vintage-title {
-  font-family: 'Old Standard TT', serif;
-  font-weight: 900;
-  font-size: 1rem;
-  letter-spacing: 3px;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 1.5rem;
   text-align: center;
 }
 
@@ -298,13 +350,12 @@ const openPrivacy = () => {
 }
 
 .settings-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.8rem;
-  font-weight: 900;
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 3.5rem;
   margin: 10px 0;
-  text-transform: uppercase;
   color: var(--ion-text-color);
   line-height: 1;
+  letter-spacing: -1px;
 }
 
 .masthead-bottom {
@@ -354,21 +405,107 @@ const openPrivacy = () => {
   font-size: 1.1rem;
   font-weight: 900;
   margin: 0;
-  color: var(--ion-text-color);
+  color: #000;
   text-transform: uppercase;
 }
 
 .setting-desc {
-  font-family: 'EB Garamond', serif;
-  font-size: 1rem;
-  color: var(--ion-text-color);
-  opacity: 0.8;
-  margin: 2px 0 0;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #000;
+  opacity: 1;
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 
-.setting-icon {
-  font-size: 1.4rem;
-  color: var(--ion-text-color);
+/* About Modal Styling */
+.about-modal {
+  --background: #fdfbf3;
+  --height: 80%;
+  --border-radius: 0;
+  --width: 95%;
+}
+
+.modal-parchment {
+  background-color: #fdfbf3;
+  height: 100%;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto;
+  border: 10px double #000;
+}
+
+.modal-masthead {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.modal-title {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 4.5rem;
+  color: #000;
+  margin: 10px 0;
+  line-height: .9;
+}
+
+.modal-body {
+  flex: 1;
+}
+
+.article-headline {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  text-align: center;
+  color: #000;
+  margin-bottom: 15px;
+  letter-spacing: 2px;
+}
+
+.about-text {
+  font-family: 'Old Standard TT', serif;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  color: #000; /* Absolute Black */
+  margin-bottom: 20px;
+  text-align: justify;
+  font-weight: 500;
+}
+
+.modal-footer {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.done-btn {
+  background: #000;
+  color: #fdfbf3;
+  border: none;
+  font-family: 'Old Standard TT', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  padding: 15px 40px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 #444;
+}
+
+.done-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 4px 4px 0 #444;
+}
+
+:deep(.about-modal .ion-page) {
+  background: #fdfbf3;
+}
+.article-separator {
+  height: 4px;
+  border-top: 1px solid var(--ion-text-color);
+  border-bottom: 1px solid var(--ion-text-color);
+  margin: 30px 0;
 }
 
 .credits-expanded {
@@ -390,17 +527,19 @@ const openPrivacy = () => {
   font-family: 'Old Standard TT', serif;
   font-size: 0.9rem;
   font-weight: 900;
-  color: var(--ion-text-color);
+  color: #000;
   margin-bottom: 2px;
   text-transform: uppercase;
 }
 
 .credit-text {
-  font-family: 'EB Garamond', serif;
+  font-family: 'Old Standard TT', serif;
   font-size: 1rem;
-  line-height: 1.4;
-  color: var(--ion-text-color);
+  font-weight: 500;
+  line-height: 1.6;
+  color: #000;
   margin: 0;
+  opacity: 1;
 }
 
 .article-separator {
@@ -411,11 +550,11 @@ const openPrivacy = () => {
 }
 
 .correspondent-note {
-  font-family: 'EB Garamond', serif;
-  font-size: 0.9rem;
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.95rem;
   font-style: italic;
-  color: var(--ion-text-color);
-  opacity: 0.7;
+  color: #000;
+  opacity: 1;
   text-align: center;
   margin-bottom: 20px;
 }
@@ -489,14 +628,14 @@ const openPrivacy = () => {
 .motto {
   font-style: italic;
   font-size: 1rem;
-  color: var(--ion-text-color);
+  color: #1a1a1a;
 }
 
 .version-tag {
   font-family: 'Old Standard TT', serif;
   font-size: 0.7rem;
   font-weight: 900;
-  color: var(--ion-text-color);
+  color: #1a1a1a;
   opacity: 0.6;
   letter-spacing: 2px;
   margin-top: 10px;
