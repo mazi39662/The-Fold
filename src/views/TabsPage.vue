@@ -13,6 +13,11 @@
           <ion-label>Weather</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="tab6" href="/tabs/tab6" @click="handleTabClick('tab6')">
+          <ion-icon aria-hidden="true" :icon="gameControllerOutline" />
+          <ion-label>Games</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="tab2" href="/tabs/tab2" @click="handleTabClick('tab2')">
           <ion-icon aria-hidden="true" :icon="bookmarkOutline" />
           <ion-label>Collection</ion-label>
@@ -34,7 +39,7 @@
 
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { newspaperOutline, bookmarkOutline, libraryOutline, cloudyOutline, settingsOutline } from 'ionicons/icons';
+import { newspaperOutline, bookmarkOutline, libraryOutline, cloudyOutline, settingsOutline, gameControllerOutline } from 'ionicons/icons';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
