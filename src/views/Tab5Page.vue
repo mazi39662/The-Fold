@@ -58,6 +58,14 @@
               <ion-icon :icon="shieldCheckmarkOutline" class="setting-icon"></ion-icon>
             </div>
 
+            <div class="setting-row" @click="openTerms">
+              <div class="setting-info">
+                <h3 class="setting-name">Terms of Service</h3>
+                <p class="setting-desc">User agreement and service terms.</p>
+              </div>
+              <ion-icon :icon="documentTextOutline" class="setting-icon"></ion-icon>
+            </div>
+
             <div class="contact-details">
               <div class="credit-item">
                 <h4 class="credit-heading">Support Email</h4>
@@ -93,6 +101,10 @@
               <div class="credit-item">
                 <h4 class="credit-heading">News Wires</h4>
                 <p class="credit-text">Comprehensive collection of RSS feeds from: Manila Times, Philstar, GMA News, ABS-CBN News, Rappler, Inquirer, Manila Bulletin, BusinessWorld, BBC, Reuters, Al Jazeera, The Guardian, CNN, NYT, AP News, USA Today, TechCrunch, The Verge, Wired, Engadget, Mashable, CNET, Ars Technica, Financial Times, Bloomberg, Forbes, WSJ, CNBC, The Economist, Variety, THR, TMZ, Rolling Stone, Billboard, ESPN, Sky Sports, CBS Sports, Bleacher Report, IGN, GameSpot, Kotaku, PC Gamer, Polygon, Scientific American, Nature, WHO and NPR.</p>
+              </div>
+              <div class="credit-item">
+                <h4 class="credit-heading">Games & Puzzles</h4>
+                <p class="credit-text">Shadify API (shadify.yurace.pro) provides puzzle generation for Anagram, Minesweeper, Word Search, Capitals Quiz, Flags Quiz, Set, Camp (Tents & Trees), and Memory games. All puzzles are dynamically generated via their public API service.</p>
               </div>
             </div>
 
@@ -186,7 +198,8 @@ import {
   chevronUpOutline,
   mailOutline,
   shieldCheckmarkOutline,
-  globeOutline
+  globeOutline,
+  documentTextOutline
 } from 'ionicons/icons';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -285,6 +298,10 @@ const contactSupport = () => {
 
 const openPrivacy = () => {
   window.open('https://mazi39662.github.io/franz_portfolio.com/privacy-policy', '_blank');
+};
+
+const openTerms = () => {
+  router.push('/terms-of-service');
 };
 </script>
 
@@ -390,14 +407,24 @@ const openPrivacy = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding: 18px 15px;
+  margin-bottom: 15px;
+  background: var(--parchment-white, #fff); /* Using a clean parchment background */
+  border: 2px solid var(--ion-text-color, #1a1a1a);
+  box-shadow: 5px 5px 0 var(--ion-text-color, #1a1a1a);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
+  position: relative;
 }
 
 .setting-row:hover {
-  transform: translateX(5px);
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ion-text-color, #1a1a1a);
+}
+
+.setting-row:active {
+  transform: translate(5px, 5px);
+  box-shadow: 0px 0px 0 var(--ion-text-color, #1a1a1a);
 }
 
 .setting-name {
@@ -411,12 +438,12 @@ const openPrivacy = () => {
 
 .setting-desc {
   font-family: 'Old Standard TT', serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #000;
-  opacity: 1;
-  margin: 4px 0 0;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  opacity: 0.8;
+  margin: 6px 0 0;
+  line-height: 1.3;
 }
 
 /* About Modal Styling */
@@ -543,10 +570,11 @@ const openPrivacy = () => {
 }
 
 .article-separator {
-  height: 4px;
-  border-top: 1px solid var(--ion-text-color);
-  border-bottom: 1px solid var(--ion-text-color);
-  margin: 30px 0;
+  height: 6px;
+  border-top: 2px solid var(--ion-text-color);
+  border-bottom: 2px solid var(--ion-text-color);
+  margin: 40px 0;
+  opacity: 0.8;
 }
 
 .correspondent-note {

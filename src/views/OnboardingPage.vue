@@ -4,8 +4,31 @@
       <div class="paper-overlay"></div>
       
       <div class="content-container">
+        <!-- Step 0: Pre-press Loading -->
+        <div v-if="currentStep === 0" class="onboarding-step loader-step fade-in">
+          <div class="preloading-container">
+            <div class="newspaper-masthead-mini">
+              <h3 class="old-font">THE FOLD</h3>
+              <div class="article-separator-mini"></div>
+              <h4 class="pre-press-title">PRE-PRESS OPERATIONS</h4>
+            </div>
+            
+            <div class="loader-visual">
+              <ion-spinner name="lines-sharp" color="dark"></ion-spinner>
+            </div>
+            
+            <div class="preloading-status-area">
+              <p class="status-main">{{ preloadingStatus }}</p>
+              <div class="vintage-progress-bar">
+                <div class="progress-fill" :style="{ width: preloadingProgress + '%' }"></div>
+              </div>
+              <p class="status-sub">STATION: {{ APP_CONFIG.EDITION }} WIRE</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Step 1: Welcome Poster -->
-        <div v-if="currentStep === 1" class="onboarding-step fade-in">
+        <div v-else-if="currentStep === 1" class="onboarding-step fade-in">
           <div class="onboarding-card">
             <img src="/assets/onboarding/welcome.png" alt="Welcome to The Fold" class="onboarding-poster" />
             <div class="onboarding-text">
@@ -111,7 +134,8 @@ import {
   IonContent, 
   IonIcon, 
   IonSearchbar, 
-  toastController 
+  toastController,
+  IonSpinner
 } from '@ionic/vue';
 import { 
   newspaperOutline, 
@@ -123,9 +147,12 @@ import {
 } from 'ionicons/icons';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { APP_CONFIG } from '@/config/appConfig';
 
 const router = useRouter();
-const currentStep = ref(1);
+const currentStep = ref(0); // Start at loader
+const preloadingStatus = ref('Initializing Printing Press...');
+const preloadingProgress = ref(0);
 const searchQuery = ref('');
 const selectedFeeds = ref<string[]>([]);
 const expandedCategories = ref<string[]>(['Philippines News']);
@@ -272,7 +299,68 @@ watch(searchQuery, (newVal) => {
   }
 });
 
+const preloadAssets = async () => {
+  const assets = [
+    '/assets/onboarding/welcome.png',
+    '/assets/onboarding/features.png',
+    '/paper-texture.png'
+  ];
+  
+  const statuses = [
+    'Assembling the Daily Layout...',
+    'Calibrating Ink Distribution...',
+    'Connecting to Global News Wires...',
+    'Folding Priority Dispatches...',
+    'Dispatching Newsboys...'
+  ];
+
+  let loadedCount = 0;
+  
+  // Update pseudo-progress for feel
+  const progressInterval = setInterval(() => {
+    if (preloadingProgress.value < 100) {
+      preloadingProgress.value += 1;
+      
+      // Update text status based on progress
+      const statusIdx = Math.min(
+        Math.floor(preloadingProgress.value / 20),
+        statuses.length - 1
+      );
+      preloadingStatus.value = statuses[statusIdx];
+    }
+  }, 40);
+
+  // Actual image preloading
+  const promises = assets.map(src => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = resolve;
+      img.onerror = resolve; // Continue even if one fails
+    });
+  });
+
+  await Promise.all(promises);
+  
+  // Ensure we reach 100% and show final status for a moment
+  clearInterval(progressInterval);
+  preloadingProgress.value = 100;
+  preloadingStatus.value = 'Ready for Distribution.';
+  
+  setTimeout(() => {
+    currentStep.value = 1;
+  }, 800);
+};
+
 onMounted(() => {
+  // Check if we should even show onboarding (prevent flash if already done)
+  const done = localStorage.getItem('has_completed_onboarding');
+  if (done === 'true') {
+    router.replace('/tabs/tab1');
+    return;
+  }
+  
+  preloadAssets();
   // Default selection
   selectedFeeds.value = ['https://www.manilatimes.net/news/feed/'];
 });
@@ -603,6 +691,76 @@ onMounted(() => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pre-press Loader Styles */
+.loader-step {
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.preloading-container {
+  text-align: center;
+  width: 100%;
+  max-width: 300px;
+}
+
+.pre-press-title {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 4px;
+  margin-top: 10px;
+  opacity: 0.6;
+}
+
+.loader-visual {
+  margin: 40px 0;
+  transform: scale(1.5);
+}
+
+.preloading-status-area {
+  margin-top: 20px;
+}
+
+.status-main {
+  font-family: 'EB Garamond', serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  margin-bottom: 15px;
+  color: #1a1a1a;
+}
+
+.vintage-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0,0,0,0.1);
+  border: 1px solid #1a1a1a;
+  padding: 1px;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #1a1a1a;
+  transition: width 0.3s ease;
+}
+
+.status-sub {
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  opacity: 0.4;
+}
+
+.article-separator-mini {
+  height: 3px;
+  border-top: 1px solid #1a1a1a;
+  border-bottom: 1px solid #1a1a1a;
+  margin: 5px auto;
+  width: 60px;
 }
 
 .mb-20 { margin-bottom: 20px; }

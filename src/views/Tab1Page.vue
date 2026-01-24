@@ -77,71 +77,9 @@
               <div class="article-meta">
                 <span class="byline" v-if="item.creator"> • By {{ item.creator }}</span>
                 <span class="dateline"> • {{ formatDate(item.pubDate) }}</span>
-              </div>
-
-              <!-- Action Buttons for articles WITHOUT images -->
-              <div class="article-actions no-image-actions" v-if="!item.media || item.media.length === 0" @click.stop>
-                <ion-button 
-                  fill="clear" 
-                  size="small"
-                  :class="{ 'active': isLiked(item.link) }"
-                  @click="toggleLike(item)"
-                >
-                  <ion-icon slot="icon-only" :icon="isLiked(item.link) ? heart : heartOutline"></ion-icon>
-                </ion-button>
-                <ion-button 
-                  fill="clear" 
-                  size="small"
-                  :class="{ 'active': isSaved(item.link) }"
-                  @click="toggleSave(item)"
-                >
-                  <ion-icon slot="icon-only" :icon="isSaved(item.link) ? bookmark : bookmarkOutline"></ion-icon>
-                </ion-button>
-                <ion-button 
-                  fill="clear" 
-                  size="small"
-                  @click="shareArticle(item)"
-                >
-                  <ion-icon slot="icon-only" :icon="shareSocialOutline"></ion-icon>
-                </ion-button>
-              </div>
-
-              <!-- Image inside sticky header as requested -->
-              <!-- Multimedia Album (Images & Videos) -->
-              <div class="article-album-container" v-if="item.media && item.media.length > 0">
-                <div class="album-scroller" :class="{ 'single-item': item.media.length === 1 }">
-                  <div 
-                    v-for="(media, mIdx) in item.media" 
-                    :key="mIdx" 
-                    class="album-item"
-                  >
-                    <!-- Video Player -->
-                    <video 
-                      v-if="media.type === 'video'"
-                      class="vintage-video"
-                      controls
-                      playsinline
-                      preload="metadata"
-                      @click.stop
-                    >
-                      <source :src="media.url" />
-                      Your browser does not support the video tag.
-                    </video>
-
-                    <!-- Image with Fullscreen -->
-                    <img 
-                      v-else
-                      :src="media.url" 
-                      :alt="item.title" 
-                      class="vintage-image" 
-                      @click.stop="openImageFullscreen(media.url)"
-                      loading="lazy"
-                    />
-                  </div>
-                </div>
                 
-                <!-- Action Buttons -->
-                <div class="article-actions" @click.stop v-if="item.media && item.media.length > 0">
+                <!-- Consolidated Action Buttons -->
+                <div class="article-actions-compact" @click.stop>
                   <ion-button 
                     fill="clear" 
                     size="small"
@@ -166,13 +104,58 @@
                     <ion-icon slot="icon-only" :icon="shareSocialOutline"></ion-icon>
                   </ion-button>
                 </div>
-
-                <!-- Album Indicator -->
-                <div class="album-indicator" v-if="item.media.length > 1">
-                  ARCHIVE: {{ item.media.length }} DISPATCHES
-                </div>
               </div>
 
+              <!-- Multimedia Album (Images & Videos) -->
+              <div class="article-album-container" v-if="item.media && item.media.length > 0">
+                <div class="album-scroller" :class="{ 'single-item': item.media.length === 1 }">
+                  <div 
+                    v-for="(media, mIdx) in item.media" 
+                    :key="mIdx" 
+                    class="album-item"
+                  >
+                    <!-- Video Player -->
+                    <video 
+                      v-if="media.type === 'video'"
+                      class="vintage-video"
+                      controls
+                      playsinline
+                      preload="metadata"
+                      @click.stop
+                    >
+                      <source :src="media.url" />
+                      Your browser does not support the video tag.
+                    </video>
+
+                    <!-- Image with Fullscreen and Error Handling -->
+                    <template v-else>
+                      <div v-if="imageErrorMap[media.url]" class="broken-dispatch-placeholder">
+                        <ion-icon :icon="imageOutline" class="broken-icon"></ion-icon>
+                        <span class="broken-text">DISPATCH INTERRUPTED</span>
+                      </div>
+                      <img 
+                        v-else
+                        :src="media.url" 
+                        :alt="item.title" 
+                        class="vintage-image" 
+                        @click.stop="openImageFullscreen(media.url)"
+                        @error="handleImageError(media.url)"
+                        loading="lazy"
+                      />
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Navigation Arrows for Multi-item Dispatch -->
+                <div class="album-navigation" v-if="item.media.length > 1">
+                  <div class="nav-arrow left-arrow" @click.stop="scrollAlbum($event, 'left')">
+                    <ion-icon :icon="chevronBackOutline"></ion-icon>
+                  </div>
+                  <div class="nav-arrow right-arrow" @click.stop="scrollAlbum($event, 'right')">
+                    <ion-icon :icon="chevronForwardOutline"></ion-icon>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div class="article-body">
@@ -193,6 +176,22 @@
         <div v-if="loadingMore" class="loading-more">
           <ion-spinner name="lines-sharp"></ion-spinner>
           <p class="old-font">Loading more dispatches...</p>
+        </div>
+
+        <!-- End of Feed / Configure Sources Button -->
+        <div v-if="isAllLoaded" class="end-of-feed-container parchment">
+          <div class="article-separator"></div>
+          <div class="end-content">
+            <ion-icon :icon="newspaperOutline" class="end-icon"></ion-icon>
+            <h3 class="old-font">End of Today's Dispatches</h3>
+            <p class="end-description">The telegraph lines are quiet for now. You've reviewed all available stories from your selected wires.</p>
+            <ion-button @click="goToSources" class="vintage-button full-width-btn">
+              CONFIGURE NEWS SOURCES
+              <ion-icon slot="end" :icon="arrowForwardOutline"></ion-icon>
+            </ion-button>
+            <p class="masthead-edition bottom-motto">{{ APP_CONFIG.MOTTO }}</p>
+          </div>
+          <div class="article-separator"></div>
         </div>
       </div>
     </ion-content>
@@ -236,7 +235,12 @@ import {
   newspaperOutline, 
   arrowForwardOutline,
   chevronDownCircleOutline,
-  close
+  close,
+  chevronBackOutline,
+  chevronForwardOutline,
+  cameraOutline,
+  videocamOutline,
+  imageOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -272,6 +276,7 @@ const currentPage = ref(1);
 const itemsPerPage = 20;
 const loadingMore = ref(false);
 const fullscreenImage = ref<string | null>(null);
+const imageErrorMap = ref<Record<string, boolean>>({});
 const currentLocation = computed(() => sharedWeatherState.value.location);
 const currentWeather = computed(() => sharedWeatherState.value.condition);
 
@@ -284,6 +289,13 @@ const router = useRouter();
 // Computed property for lazy loading
 const displayedNewsItems = computed(() => {
   return newsItems.value.slice(0, currentPage.value * itemsPerPage);
+});
+
+const isAllLoaded = computed(() => {
+  return !loading.value && 
+         !loadingMore.value && 
+         newsItems.value.length > 0 && 
+         displayedNewsItems.value.length === newsItems.value.length;
 });
 
 // Computed
@@ -798,6 +810,24 @@ const closeFullscreen = () => {
   fullscreenImage.value = null;
 };
 
+const handleImageError = (url: string) => {
+  imageErrorMap.value[url] = true;
+};
+
+const scrollAlbum = (event: Event, direction: 'left' | 'right') => {
+  const arrow = event.currentTarget as HTMLElement;
+  const container = arrow.closest('.article-album-container');
+  const scroller = container?.querySelector('.album-scroller');
+  
+  if (scroller) {
+    const scrollAmount = scroller.clientWidth;
+    scroller.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    });
+  }
+};
+
 const handleHeaderTouchStart = (ev: TouchEvent) => {
   touchStartY.value = ev.touches[0].clientY;
   touchStartX.value = ev.touches[0].clientX;
@@ -1184,8 +1214,8 @@ onMounted(() => {
 }
 
 .article-header-sticky.has-media {
-  height: 30vh; /* Request: 30% height ONLY when image exists */
-  justify-content: space-between;
+  height: 35vh; /* Slightly increased to ensure actions aren't clipped */
+  justify-content: flex-start;
 }
 
 .article-title {
@@ -1217,9 +1247,32 @@ onMounted(() => {
   margin-bottom: 5px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   text-transform: uppercase;
   letter-spacing: 1px;
-  /* Keep author and date visible during scroll */
+}
+
+.article-actions-compact {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.article-actions-compact ion-button {
+  --color: #1a1a1a;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  margin: 0;
+  height: 24px;
+}
+
+.article-actions-compact ion-button.active {
+  color: #c62828 !important;
+}
+
+.article-actions-compact ion-icon {
+  font-size: 1.2rem;
 }
 
 .source-tag {
@@ -1310,6 +1363,90 @@ onMounted(() => {
   object-fit: cover;
   filter: sepia(0.6) contrast(1.1) grayscale(0.5);
   display: block;
+}
+
+.broken-dispatch-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f4ecda;
+  color: #1a1a1a;
+  opacity: 0.6;
+}
+
+.broken-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.broken-text {
+  font-family: 'Old Standard TT', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.album-navigation {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  pointer-events: none;
+  z-index: 20; /* Increased z-index to be above items */
+}
+
+.nav-arrow {
+  background: rgba(26, 26, 26, 0.6);
+  color: #f4ecda;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 236, 218, 0.5);
+  animation: pulse-arrow 2s infinite;
+  pointer-events: auto; /* Enable clicks */
+  cursor: pointer;
+}
+
+.nav-arrow:active {
+  transform: scale(0.9);
+  background: rgba(26, 26, 26, 0.8);
+}
+
+.left-arrow {
+  animation-delay: 0s;
+}
+
+.right-arrow {
+  animation-delay: 1s;
+}
+
+.nav-arrow ion-icon {
+  font-size: 1.2rem;
+}
+
+@keyframes pulse-arrow {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
 }
 
 .image-caption {
@@ -1575,6 +1712,48 @@ ion-refresher {
 .vintage-close-wrapper:active .vintage-close-btn {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+/* End of Feed Styles */
+.end-of-feed-container {
+  padding: 40px 10px 80px;
+  text-align: center;
+}
+
+.end-content {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.end-icon {
+  font-size: 3.5rem;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+
+.end-description {
+  font-family: 'EB Garamond', serif;
+  font-size: 1.15rem;
+  color: #444;
+  margin: 10px auto 30px;
+  max-width: 300px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.full-width-btn {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 30px;
+}
+
+.bottom-motto {
+  margin-top: 20px;
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 
 @keyframes fadeIn {

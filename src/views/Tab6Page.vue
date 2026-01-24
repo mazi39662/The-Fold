@@ -1,9 +1,7 @@
 <template>
   <ion-page class="newspaper-page">
     <ion-header class="ion-no-border">
-      <ion-toolbar class="vintage-toolbar">
-        <ion-title>The Leisure Cabinet</ion-title>
-      </ion-toolbar>
+     
     </ion-header>
 
     <ion-content :fullscreen="true" class="newspaper-content">
@@ -14,7 +12,6 @@
           <div class="masthead-top">
             <span class="masthead-date">{{ currentFormattedDate }}</span>
             <span class="masthead-edition">ARCADE EDITION</span>
-            <span class="masthead-price">VOL. VI</span>
           </div>
           <h1 class="newspaper-title">Games & Riddles</h1>
           <div class="masthead-bottom">
@@ -24,12 +21,19 @@
 
         <div class="games-grid">
           <div 
-            v-for="game in games" 
+            v-for="game in sortedGames" 
             :key="game.id" 
             class="game-article"
             @click="openGame(game.id)"
           >
             <div class="article-inner">
+              <div 
+                class="favorite-btn" 
+                @click.stop="toggleFavorite(game.id)"
+                :class="{ 'is-favorite': isFavorite(game.id) }"
+              >
+                <ion-icon :icon="isFavorite(game.id) ? heart : heartOutline"></ion-icon>
+              </div>
               <div class="game-icon-container">
                 <ion-icon :icon="game.icon" class="game-icon"></ion-icon>
               </div>
@@ -44,21 +48,23 @@
 
       <!-- Instruction Modal -->
       <ion-modal :is-open="isInstructionModalOpen" @didDismiss="isInstructionModalOpen = false" class="instruction-modal">
-        <div class="modal-wrapper instruction-wrapper">
-          <div class="paper-overlay"></div>
-          <div class="instruction-content">
-            <div class="newspaper-masthead-mini">
-              <h3 class="old-font">FIELD MANUAL</h3>
-              <div class="article-separator-mini"></div>
-            </div>
-            <h2 class="game-instruction-title">{{ activeGame?.name }} Protocol</h2>
-            <p class="instruction-body">{{ gameInstructions[activeGame?.id] }}</p>
-            <div class="instruction-actions">
-              <ion-button expand="block" class="vintage-button" @click="startActiveGame">Start</ion-button>
-              <ion-button expand="block" fill="clear" color="dark" class="old-font" @click="isInstructionModalOpen = false">Cancel</ion-button>
+        <ion-content class="newspaper-content">
+          <div class="modal-wrapper instruction-wrapper">
+            <div class="paper-overlay"></div>
+            <div class="instruction-content">
+              <div class="newspaper-masthead-mini">
+                <h3 class="old-font">FIELD MANUAL</h3>
+                <div class="article-separator-mini"></div>
+              </div>
+              <h2 class="game-instruction-title">{{ activeGame?.name }} Protocol</h2>
+              <p class="instruction-body">{{ gameInstructions[activeGame?.id] }}</p>
+              <div class="instruction-actions">
+                <ion-button expand="block" class="vintage-button" @click="startActiveGame">Start</ion-button>
+                <ion-button expand="block" fill="clear" color="dark" class="old-font" @click="isInstructionModalOpen = false">Cancel</ion-button>
+              </div>
             </div>
           </div>
-        </div>
+        </ion-content>
       </ion-modal>
 
       <!-- Main Game Modal -->
@@ -360,11 +366,45 @@ import {
   IonItem, IonLabel, IonInput, alertController
 } from '@ionic/vue';
 import { 
-  helpCircleOutline, gridOutline, appsOutline, flaskOutline, 
+  helpCircleOutline, gridOutline, appsOutline, businessOutline, 
   searchOutline, closeOutline, flagOutline, flameOutline, 
-  leafOutline, triangleOutline
+  leafOutline, triangleOutline, heart, heartOutline
 } from 'ionicons/icons';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+
+const FAVORITES_KEY = 'favorite_games';
+const favoriteIds = ref<string[]>([]);
+
+onMounted(() => {
+  const saved = localStorage.getItem(FAVORITES_KEY);
+  if (saved) {
+    try {
+      favoriteIds.value = JSON.parse(saved);
+    } catch (e) {
+      favoriteIds.value = [];
+    }
+  }
+});
+
+const isFavorite = (gameId: string) => favoriteIds.value.includes(gameId);
+
+const toggleFavorite = (gameId: string) => {
+  const index = favoriteIds.value.indexOf(gameId);
+  if (index > -1) {
+    favoriteIds.value.splice(index, 1);
+  } else {
+    favoriteIds.value.push(gameId);
+  }
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteIds.value));
+};
+
+const sortedGames = computed(() => {
+  return [...games].sort((a, b) => {
+    const aFav = isFavorite(a.id) ? 1 : 0;
+    const bFav = isFavorite(b.id) ? 1 : 0;
+    return bFav - aFav;
+  });
+});
 
 const currentFormattedDate = computed(() => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -379,7 +419,7 @@ const games = [
   { id: 'anagram', name: 'Anagram', endpoint: 'anagram/generator', icon: helpCircleOutline, description: 'Extract all hidden English nouns from a master dispatch.' },
   { id: 'minesweeper', name: 'Mines', endpoint: 'minesweeper/generator', icon: appsOutline, description: 'Navigate the strategic trenches while avoiding explosives.' },
   { id: 'wordsearch', name: 'Search', endpoint: 'wordsearch/generator', icon: searchOutline, description: 'Identify terms hidden within the encrypted cipher grid.' },
-  { id: 'capitals', name: 'Capitals', endpoint: 'countries/capital-quiz', icon: flaskOutline, description: 'A test of global geography for the well-traveled reader.' },
+  { id: 'capitals', name: 'Capitals', endpoint: 'countries/capital-quiz', icon: businessOutline, description: 'A test of global geography for the well-traveled reader.' },
   { id: 'flags', name: 'Flags', endpoint: 'countries/country-quiz', icon: flagOutline, description: 'Identify the sovereign nation from its archived banner.' },
   { id: 'set', name: 'Set', endpoint: 'set/start', icon: appsOutline, description: 'An abstract pattern recognition practice for sharp eyes.' },
   { id: 'camp', name: 'Camp', endpoint: 'camp/generator', icon: leafOutline, description: 'Tents and trees logic plot coordination and audit.' },
@@ -419,14 +459,21 @@ const wsSelectionEnd = ref<{r: number, c: number} | null>(null);
 const wsIsDragging = ref(false);
 
 const gameInstructions: Record<string, string> = {
-  anagram: "Extract all hidden English nouns from the scrambled word. Type and submit words below to collect them all.",
-  minesweeper: "Navigate the grid without hitting mines. Numbers indicate adjacent explosives. Tap to reveal, or flag suspected locations.",
-  wordsearch: "Find hidden terms in the grid. Tap the first letter then the last letter of a word (or drag) to decrypt it.",
-  capitals: "Identify the official capital city for the displayed nation and its sovereign banner.",
-  flags: "Correctly name the sovereign nation based on its archived flag.",
-  set: "Select 3 cards for a SET. For each feature (Color, Shape, Number, Shaded), they must be ALL identical or ALL unique.",
-  camp: "Place tents next to trees. Tents cannot touch each other (even diagonally). Hints show required counts.",
-  memory: "Flip cards to find matching pairs in the archive. Success requires matching all symbols."
+  anagram: "OBJECTIVE: Find all English nouns hidden within the scrambled letters.\n\nHOW TO PLAY:\n1. Study the scrambled word displayed at the top\n2. Identify English nouns that can be formed using those letters\n3. Type each word in the input field and press SUBMIT WORD\n4. Successfully found words will appear in the COLLECTED section\n5. Continue until you've discovered all possible nouns\n\nTIP: Each letter can be used multiple times across different words.",
+  
+  minesweeper: "OBJECTIVE: Reveal all safe cells without detonating any mines.\n\nHOW TO PLAY:\n1. Tap any cell to reveal what's underneath\n2. Numbers show how many mines are adjacent to that cell (including diagonals)\n3. Use the numbers as clues to deduce mine locations\n4. Long-press or right-click a cell to place a flag marker on suspected mines\n5. Flagged cells cannot be accidentally revealed\n\nWARNING: Revealing a mine ends the game immediately. Use flags wisely!",
+  
+  wordsearch: "OBJECTIVE: Locate all hidden terms within the letter grid.\n\nHOW TO PLAY:\n1. Review the list of HIDDEN TERMS below the grid\n2. Find each word hidden horizontally, vertically, or diagonally\n3. METHOD A: Tap the first letter, then tap the last letter of the word\n4. METHOD B: Click and drag from the first to last letter\n5. Successfully found words will be highlighted and marked as discovered\n\nNOTE: Words may be spelled forwards or backwards in any direction.",
+  
+  capitals: "OBJECTIVE: Test your knowledge of world geography and capital cities.\n\nHOW TO PLAY:\n1. Observe the country name and its national flag displayed\n2. Review the four capital city options provided\n3. Select the correct capital city for the displayed nation\n4. Immediate feedback will confirm if your answer is correct\n\nCHALLENGE: Try to answer without guessing for the best mental exercise!",
+  
+  flags: "OBJECTIVE: Identify nations by their sovereign banners.\n\nHOW TO PLAY:\n1. Study the national flag displayed on screen\n2. Review the four country name options provided\n3. Select the nation that corresponds to the flag shown\n4. You'll receive instant feedback on your selection\n\nTIP: Pay attention to colors, symbols, and patterns unique to each flag.",
+  
+  set: "OBJECTIVE: Find three cards that form a valid SET.\n\nHOW TO PLAY:\n1. Each card has 4 features: Color, Shape, Number (1-3), and Shading\n2. Select any 3 cards by tapping them\n3. For a valid SET, each feature must be either:\n   - ALL THE SAME across the 3 cards, OR\n   - ALL DIFFERENT across the 3 cards\n4. Press VERIFY SELECTION to check if your set is valid\n\nEXAMPLE: 3 red solid ovals, 3 green solid ovals, 3 blue solid ovals = VALID (color all different, rest all same)",
+  
+  camp: "OBJECTIVE: Place tents adjacent to trees following specific rules.\n\nHOW TO PLAY:\n1. Each tree must have exactly one tent next to it (horizontally or vertically, not diagonally)\n2. Tents cannot touch each other, even diagonally\n3. Numbers on the sides show how many tents must be in that row/column\n4. Tap empty cells to place or remove tents\n5. Press AUDIT PLOT when complete to verify your solution\n\nSTRATEGY: Start with rows/columns that have the highest tent requirements.",
+  
+  memory: "OBJECTIVE: Match all pairs of identical symbols.\n\nHOW TO PLAY:\n1. All cards start face-down showing '?'\n2. Tap any card to flip it and reveal its symbol\n3. Tap a second card to flip it\n4. If the symbols match, both cards stay revealed\n5. If they don't match, both cards flip back face-down after a moment\n6. Continue until all pairs are matched\n\nTIP: Try to remember the positions of symbols you've already seen!"
 };
 
 const openGame = (gameId: string) => {
@@ -805,28 +852,65 @@ const isWSFound = (r: number, c: number) => {
 
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 30px;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
 }
 
 .game-article {
   cursor: pointer;
   position: relative;
+  transition: transform 0.1s ease;
 }
 
 .article-inner {
-  padding: 15px;
-  border-left: 1px solid #ccc;
-  border-right: 1px solid #ccc;
+  padding: 12px;
+  border: 2px solid #1a1a1a;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.2);
-  transition: background 0.2s ease;
+  background: #fffdf7;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+}
+
+.game-article:hover {
+  transform: translate(-3px, -3px);
 }
 
 .game-article:hover .article-inner {
-  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 9px 9px 0 #1a1a1a;
+  background: #fff;
+}
+
+.game-article:active {
+  transform: translate(6px, 6px);
+}
+
+.game-article:active .article-inner {
+  box-shadow: 0px 0px 0 #1a1a1a;
+}
+
+.favorite-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 5;
+  font-size: 1.4rem;
+  color: #1a1a1a;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.favorite-btn.is-favorite {
+  color: #c62828;
+}
+
+.favorite-btn:active {
+  transform: scale(0.8);
 }
 
 .game-icon-container {
@@ -838,7 +922,7 @@ const isWSFound = (r: number, c: number) => {
 
 .game-name {
   font-family: 'Playfair Display', serif;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 900;
   color: #000;
   text-align: center;
@@ -849,12 +933,18 @@ const isWSFound = (r: number, c: number) => {
 
 .game-desc {
   font-family: 'Old Standard TT', serif;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #333;
-  text-align: justify;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: #1a1a1a;
+  text-align: center;
   flex: 1;
   margin-bottom: 15px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .article-separator-mini {
@@ -867,19 +957,35 @@ const isWSFound = (r: number, c: number) => {
 .play-link {
   font-family: 'Old Standard TT', serif;
   font-weight: 900;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  text-align: right;
+  text-align: center;
   color: #1a1a1a;
 }
 
+@media (min-width: 768px) {
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+  }
+  .game-name { font-size: 1.5rem; }
+  .game-desc { 
+    font-size: 1rem; 
+    -webkit-line-clamp: unset; 
+    line-clamp: unset; 
+    text-align: justify;
+  }
+  .article-inner { padding: 20px; }
+  .play-link { font-size: 0.8rem; text-align: right; }
+}
+
 /* Modal UI */
-.modal-wrapper { height: 100%; background: #f4ecd8; display: flex; flex-direction: column; position: relative; }
-.instruction-wrapper { justify-content: center; padding: 20px; }
-.instruction-content { background: #fffdf7; border: 2px solid #1a1a1a; padding: 40px; max-width: 500px; width: 100%; margin: 0 auto; box-shadow: 20px 20px 0px rgba(0,0,0,0.1); position: relative; z-index: 10; z-index: 2; }
+.modal-wrapper { min-height: 100%; background: #f4ecd8; display: flex; flex-direction: column; position: relative; }
+.instruction-wrapper { justify-content: flex-start; padding: 40px 20px; }
+.instruction-content { background: #fffdf7; border: 2px solid #1a1a1a; padding: 40px; max-width: 600px; width: 100%; margin: 0 auto; box-shadow: 20px 20px 0px rgba(0,0,0,0.1); position: relative; z-index: 10; z-index: 2; }
 .newspaper-masthead-mini { text-align: center; margin-bottom: 20px; }
 .game-instruction-title { font-family: 'UnifrakturMaguntia', cursive; font-size: 2.2rem; text-align: center; margin-bottom: 20px; color: #1a1a1a; border-bottom: 1px solid #1a1a1a; padding-bottom: 10px; }
-.instruction-body { font-family: 'Old Standard TT', serif; font-size: 1.1rem; line-height: 1.6; color: #333; margin-bottom: 40px; text-align: center; font-style: italic; }
+.instruction-body { font-family: 'Old Standard TT', serif; font-size: 1rem; line-height: 1.8; color: #333; margin-bottom: 40px; text-align: left; white-space: pre-line; }
 .instruction-actions { display: flex; flex-direction: column; gap: 10px; }
 
 .game-play-area { display: flex; flex-direction: column; align-items: center; padding: 20px 0; min-height: 80vh; justify-content: flex-start; }

@@ -15,6 +15,10 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/OnboardingPage.vue')
   },
   {
+    path: '/terms-of-service',
+    component: () => import('@/views/TermsOfServicePage.vue')
+  },
+  {
     path: '/tabs/',
     component: TabsPage,
     children: [
@@ -58,10 +62,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const hasCompletedOnboarding = localStorage.getItem('has_completed_onboarding');
 
-  if (to.path !== '/onboarding' && !hasCompletedOnboarding) {
+  // Allow access to onboarding and terms-of-service without onboarding check
+  if (to.path === '/onboarding' || to.path === '/terms-of-service') {
+    next();
+  } else if (!hasCompletedOnboarding) {
     next('/onboarding');
-  } else if (to.path === '/onboarding' && hasCompletedOnboarding) {
-    next('/tabs/tab1');
   } else {
     next();
   }

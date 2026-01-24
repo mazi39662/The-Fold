@@ -1,9 +1,7 @@
 <template>
   <ion-page class="weather-page">
     <ion-header :translucent="true" class="header-fade" :class="{ 'header-visible': showHeaderTitle }">
-      <ion-toolbar class="sticky-toolbar">
-        <ion-title class="mini-title">Weather Report</ion-title>
-      </ion-toolbar>
+      
     </ion-header>
 
     <ion-content :fullscreen="true" class="weather-content" :scroll-events="true" @ionScroll="handleScroll">
